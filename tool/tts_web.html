@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Supertonic TTS</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0f0f0f; color: #e0e0e0; min-height: 100vh; padding: 2rem; }
+.container { max-width: 800px; margin: 0 auto; }
+h1 { text-align: center; margin-bottom: 0.5rem; font-size: 1.8rem; }
+.subtitle { text-align: center; color: #888; margin-bottom: 2rem; font-size: 0.9rem; }
+.status { text-align: center; margin-bottom: 1.5rem; font-size: 0.85rem; }
+.status .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
+.dot.connected { background: #4caf50; }
+.dot.disconnected { background: #f44336; }
+.card { background: #1a1a1a; border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem; border: 1px solid #2a2a2a; }
+label { display: block; font-size: 0.85rem; color: #aaa; margin-bottom: 0.4rem; }
+textarea { width: 100%; height: 140px; background: #111; border: 1px solid #333; border-radius: 8px; padding: 0.8rem; color: #e0e0e0; font-size: 0.95rem; resize: vertical; }
+textarea:focus { outline: none; border-color: #5c6bc0; }
+.controls { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; margin-top: 1rem; }
+select, input[type=range] { width: 100%; background: #111; border: 1px solid #333; border-radius: 6px; padding: 0.5rem; color: #e0e0e0; }
+select:focus { outline: none; border-color: #5c6bc0; }
+.speed-wrap { display: flex; align-items: center; gap: 0.5rem; }
+.speed-wrap input { flex: 1; }
+.speed-val { min-width: 40px; text-align: center; font-size: 0.9rem; color: #5c6bc0; }
+.btn-row { display: flex; gap: 1rem; margin-top: 1.5rem; }
+button { flex: 1; padding: 0.8rem; border: none; border-radius: 8px; font-size: 1rem; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+button:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-speak { background: #5c6bc0; color: white; }
+.btn-speak:hover:not(:disabled) { background: #7986cb; }
+.btn-download { background: #2a2a2a; color: #e0e0e0; border: 1px solid #444; }
+.btn-download:hover:not(:disabled) { background: #333; }
+.btn-stop { background: #c62828; color: white; }
+.btn-stop:hover:not(:disabled) { background: #e53935; }
+.result { margin-top: 1rem; }
+.result audio { width: 100%; margin-top: 0.5rem; }
+.info { font-size: 0.8rem; color: #888; margin-top: 0.5rem; }
+.tips { font-size: 0.85rem; line-height: 1.6; }
+.tips h3 { color: #5c6bc0; margin-bottom: 0.5rem; font-size: 0.95rem; }
+.tips code { background: #222; padding: 2px 6px; border-radius: 4px; font-size: 0.8rem; }
+.tips table { width: 100%; border-collapse: collapse; margin-top: 0.5rem; }
+.tips td, .tips th { padding: 0.4rem 0.6rem; border: 1px solid #333; font-size: 0.8rem; }
+.tips th { background: #222; color: #aaa; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>🔊 Supertonic TTS</h1>
+  <p class="subtitle">Local Text-to-Speech • GPU Accelerated • 31 Languages</p>
+
+  <div class="status">
+    <span class="dot disconnected" id="statusDot"></span>
+    <span id="statusText">Connecting...</span>
+  </div>
+
+  <div class="card">
+    <label for="text">Enter text</label>
+    <textarea id="text" placeholder="Enter the text to read...&#10;&#10;Use punctuation for natural pauses.&#10;Add <breath> to insert a breath.">Hello, my name is Supertonic. <breath> Welcome to this demo, I'm really glad you're here. Isn't this amazing? Ha ha <laugh> it really works. <sigh> Well, that's all for now, thanks for listening.</textarea>
+
+    <div class="controls">
+      <div>
+        <label for="lang">Language</label>
+        <select id="lang"></select>
+      </div>
+      <div>
+        <label for="voice">Voice</label>
+        <select id="voice"></select>
+      </div>
+      <div>
+        <label>Playback speed: <span class="speed-val" id="speedVal">1.05x</span></label>
+        <input type="range" id="speed" min="0.5" max="3" step="0.05" value="1.05">
+      </div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn-speak" id="btnSpeak" disabled>▶ Convert & Play</button>
+      <button class="btn-download" id="btnDownloadWav" disabled>⬇ WAV (original)</button>
+      <button class="btn-download" id="btnDownloadWebm" disabled>⬇ WebM (with speed)</button>
+      <button class="btn-stop" id="btnStop" disabled>⏹ Stop</button>
+    </div>
+
+    <div class="result" id="result" style="display:none">
+      <audio id="audio" controls></audio>
+      <div class="info" id="info"></div>
+    </div>
+  </div>
+
+  <div class="card tips">
+    <h3>💡 Tips for natural pauses</h3>
+    <table>
+      <tr><th>Method</th><th>Example</th><th>Pause length</th></tr>
+      <tr><td>Comma <code>,</code></td><td>Hello, I am...</td><td>Short</td></tr>
+      <tr><td>Period <code>.</code></td><td>Sentence one. Sentence two.</td><td>~0.3s</td></tr>
+      <tr><td><code>&lt;breath&gt;</code></td><td>Part one &lt;breath&gt; part two</td><td>Breath</td></tr>
+      <tr><td><code>&lt;laugh&gt;</code></td><td>Ha ha &lt;laugh&gt; so fun</td><td>Laughter</td></tr>
+      <tr><td><code>&lt;sigh&gt;</code></td><td>So tired &lt;sigh&gt;</td><td>Sigh</td></tr>
+    </table>
+  </div>
+</div>
+
+<script>
+const LANGS = {en:"English",vi:"Vietnamese",ko:"Korean",ja:"Japanese",fr:"French",de:"German",es:"Spanish",pt:"Portuguese",it:"Italian",ar:"Arabic",bg:"Bulgarian",cs:"Czech",da:"Danish",el:"Greek",et:"Estonian",fi:"Finnish",hi:"Hindi",hr:"Croatian",hu:"Hungarian",id:"Indonesian",lt:"Lithuanian",lv:"Latvian",nl:"Dutch",pl:"Polish",ro:"Romanian",ru:"Russian",sk:"Slovak",sl:"Slovenian",sv:"Swedish",tr:"Turkish",uk:"Ukrainian"};
+
+const langEl = document.getElementById('lang');
+const voiceEl = document.getElementById('voice');
+const speedEl = document.getElementById('speed');
+const speedVal = document.getElementById('speedVal');
+const textEl = document.getElementById('text');
+const btnSpeak = document.getElementById('btnSpeak');
+const btnDownloadWav = document.getElementById('btnDownloadWav');
+const btnDownloadWebm = document.getElementById('btnDownloadWebm');
+const btnStop = document.getElementById('btnStop');
+const audioEl = document.getElementById('audio');
+const resultEl = document.getElementById('result');
+const infoEl = document.getElementById('info');
+const statusDot = document.getElementById('statusDot');
+const statusText = document.getElementById('statusText');
+
+let ws = null;
+let lastAudioBlob = null;
+let pendingMeta = null;
+
+// Populate lang
+Object.entries(LANGS).forEach(([code, name]) => {
+  langEl.add(new Option(`${name} (${code})`, code));
+});
+langEl.value = 'en';
+
+// Populate voices
+['F1','F2','F3','F4','F5','M1','M2','M3','M4','M5'].forEach(v => {
+  const label = v.startsWith('F') ? `${v} (Female)` : `${v} (Male)`;
+  voiceEl.add(new Option(label, v));
+});
+
+// Speed slider
+speedEl.oninput = () => { speedVal.textContent = parseFloat(speedEl.value).toFixed(2) + 'x'; };
+
+// WebSocket
+function connect() {
+  ws = new WebSocket('ws://127.0.0.1:8765');
+
+  ws.onopen = () => {
+    statusDot.className = 'dot connected';
+    statusText.textContent = 'Connected';
+    btnSpeak.disabled = false;
+  };
+
+  ws.onclose = () => {
+    statusDot.className = 'dot disconnected';
+    statusText.textContent = 'Disconnected — retrying...';
+    btnSpeak.disabled = true;
+    setTimeout(connect, 2000);
+  };
+
+  ws.onerror = () => ws.close();
+
+  ws.onmessage = (event) => {
+    if (typeof event.data === 'string') {
+      const msg = JSON.parse(event.data);
+      if (msg.status === 'connected') return;
+      if (msg.type === 'audio_meta') {
+        pendingMeta = msg;
+      } else if (msg.type === 'error') {
+        infoEl.textContent = '❌ ' + msg.message;
+        btnSpeak.disabled = false;
+      }
+    } else {
+      // Binary audio
+      lastAudioBlob = new Blob([event.data], { type: 'audio/wav' });
+      const url = URL.createObjectURL(lastAudioBlob);
+      audioEl.src = url;
+      audioEl.playbackRate = parseFloat(speedEl.value);
+      audioEl.preservesPitch = true;
+      audioEl.play();
+      resultEl.style.display = 'block';
+      btnDownloadWav.disabled = false;
+      btnDownloadWebm.disabled = false;
+      btnSpeak.disabled = false;
+      btnStop.disabled = false;
+      if (pendingMeta) {
+        infoEl.textContent = `✓ ${pendingMeta.duration.toFixed(1)}s audio • ${pendingMeta.latency_ms}ms inference • ${(pendingMeta.size/1024).toFixed(0)}KB`;
+      }
+    }
+  };
+}
+connect();
+
+// Speak
+btnSpeak.onclick = () => {
+  const text = textEl.value.trim();
+  if (!text || !ws || ws.readyState !== 1) return;
+  btnSpeak.disabled = true;
+  ws.send(JSON.stringify({
+    text,
+    lang: langEl.value,
+    voice: voiceEl.value,
+  }));
+};
+
+// Download WAV (original speed, no processing)
+btnDownloadWav.onclick = () => {
+  if (!lastAudioBlob) return;
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(lastAudioBlob);
+  a.download = `tts_${voiceEl.value}_${langEl.value}.wav`;
+  a.click();
+};
+
+// Download WebM with speed applied (uses audio element preservesPitch)
+btnDownloadWebm.onclick = async () => {
+  if (!lastAudioBlob) return;
+  const speed = parseFloat(speedEl.value);
+  btnDownloadWebm.disabled = true;
+  btnDownloadWebm.textContent = '⏺ Recording...';
+
+  const tempAudio = new Audio(URL.createObjectURL(lastAudioBlob));
+  tempAudio.playbackRate = speed;
+  tempAudio.preservesPitch = true;
+  tempAudio.volume = 1;
+
+  const audioCtx = new AudioContext();
+  const source = audioCtx.createMediaElementSource(tempAudio);
+  const dest = audioCtx.createMediaStreamDestination();
+  source.connect(dest);
+
+  const recorder = new MediaRecorder(dest.stream, { mimeType: 'audio/webm;codecs=opus' });
+  const chunks = [];
+  recorder.ondataavailable = (e) => chunks.push(e.data);
+  recorder.onstop = () => {
+    audioCtx.close();
+    const blob = new Blob(chunks, { type: 'audio/webm' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `tts_${voiceEl.value}_${langEl.value}_${speed}x.webm`;
+    a.click();
+    btnDownloadWebm.disabled = false;
+    btnDownloadWebm.textContent = '⬇ WebM (with speed)';
+  };
+
+  recorder.start();
+  tempAudio.play();
+  tempAudio.onended = () => recorder.stop();
+};
+
+// Stop
+btnStop.onclick = () => {
+  audioEl.pause();
+  audioEl.currentTime = 0;
+};
+
+// Ctrl+Enter to speak
+textEl.addEventListener('keydown', (e) => {
+  if (e.ctrlKey && e.key === 'Enter') btnSpeak.click();
+});
+</script>
+</body>
+</html>
