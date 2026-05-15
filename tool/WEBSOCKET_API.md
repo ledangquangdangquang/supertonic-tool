@@ -32,16 +32,22 @@ two messages in return: a JSON metadata frame and a binary audio frame.
    │   ◄──── JSON { status:"connected",      │   [handshake]
    │            voices:[...], languages:[...] }
    │                                         │
-   │   ──── JSON { text, lang, voice } ─►    │   [request]
+   │   ──── JSON { text, lang, voice } ─►    │   [request 1]
+   │   ──── JSON { text, lang, voice } ─►    │   [request 2]  ← can send
+   │   ──── JSON { text, lang, voice } ─►    │   [request 3]    multiple
    │                                         │
-   │   ◄──── JSON { type:"audio_meta", ...}  │   [response #1]
-   │   ◄──── Binary WAV bytes ─────────────  │   [response #2]
+   │         (server batches within 100ms)   │
    │                                         │
-   │   ──── JSON { text, ... } ───────────►  │   (next request)
-   │   ◄──── ...                              │
+   │   ◄──── JSON { type:"audio_meta", ...}  │   [response 1]
+   │   ◄──── Binary WAV bytes ─────────────  │
+   │   ◄──── JSON { type:"audio_meta", ...}  │   [response 2]
+   │   ◄──── Binary WAV bytes ─────────────  │
+   │   ◄──── JSON { type:"audio_meta", ...}  │   [response 3]
+   │   ◄──── Binary WAV bytes ─────────────  │
 ```
 
-The connection stays open. You can send many requests over the same socket.
+The connection stays open. You can send many requests without waiting for
+responses — they are collected and processed as a batch.
 
 ---
 
@@ -64,11 +70,15 @@ Use this to populate UI dropdowns.
 ```json
 {
   "type": "audio_meta",
-  "duration": 3.520,     // seconds of audio generated
-  "latency_ms": 118,     // server-side inference time
-  "size": 112640         // bytes of the next binary frame
+  "text": "Hello world.",  // echo of the request text (for matching)
+  "duration": 3.520,       // seconds of audio generated
+  "latency_ms": 118,       // server-side inference time
+  "size": 112640           // bytes of the next binary frame
 }
 ```
+
+The `text` field echoes the original request text so clients can match
+responses to requests when multiple are in-flight.
 
 ### 3.3 Audio payload (binary)
 
@@ -332,12 +342,32 @@ asyncio.run(main())
 
 ## 6. Operational Notes
 
+### Batching & GPU serialization
+
+The server uses a **batch inference** architecture:
+
+1. Incoming requests are collected into a batch queue.
+2. After a 100 ms collection window, all queued requests are processed in
+   a single GPU inference call (grouped by voice).
+3. A global GPU lock ensures only one batch runs at a time — preventing
+   DirectML command queue overflow.
+
+This means:
+- Sending 6 requests at once results in **1 batch inference** (~1–2 s total)
+  instead of 6 sequential inferences (~6–12 s).
+- Responses arrive in batch order, not necessarily request order. Use the
+  `text` field in `audio_meta` to match responses to requests.
+- If the client disconnects before results are ready, the server skips
+  sending to that client (no crash).
+
 ### Connection lifecycle
 - Server pings every 20 s; idle connections are kept alive.
-- The server handles one request at a time per connection (sequential).
-  For concurrent requests, open multiple sockets.
+- Multiple requests can be sent without waiting for responses — they are
+  batched and processed together.
 - On inference failure the server retries up to 3× internally before
   sending an `error` frame.
+- Client disconnect mid-inference is handled gracefully; the server
+  continues serving other clients.
 
 ### Recommended client patterns
 - **Always reconnect on close.** Use exponential backoff (e.g. 1 s → 2 s → 5 s).
@@ -364,6 +394,8 @@ asyncio.run(main())
 | Wrong voice played                  | Typo in `voice` → silently falls back to `M1`  |
 | Garbled / no audio in extension     | Missing offscreen document in MV3              |
 | Mixed-content error in browser      | Page is `https://`, server is `ws://` — use a proxy |
+| `887A0006 GPU will not respond`     | onnxruntime package conflict — ensure only `onnxruntime-directml` is installed (not both `-gpu` and `-directml`) |
+| Server dies on video seek           | Client sending too many requests before disconnect — server now handles this via batching + graceful disconnect |
 
 ---
 
@@ -373,9 +405,14 @@ asyncio.run(main())
 CONNECT     ws://127.0.0.1:8765
 RECV JSON   { status:"connected", voices, languages }
 
-SEND JSON   { text, lang?, voice?, speed? }
-RECV JSON   { type:"audio_meta", duration, latency_ms, size }
+SEND JSON   { text, lang?, voice?, speed? }     ← can send multiple
+SEND JSON   { text, lang?, voice?, speed? }       without waiting
+
+(server batches within 100ms, processes in 1 GPU call)
+
+RECV JSON   { type:"audio_meta", text, duration, latency_ms, size }
 RECV BIN    <WAV bytes, 16-bit PCM mono>
+  ... (one pair per request)
 
 ON ERROR    RECV JSON { type:"error", message }
 ```

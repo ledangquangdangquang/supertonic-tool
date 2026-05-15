@@ -1,0 +1,8 @@
+F1: Welcome to the Supertonic TTS demo!
+M1: Let me show you some features...
+F1|vi: Đây là ví dụ chuyển đổi văn bản thành giọng nói.
+M1|vi: Bạn có thể nhập nhiều câu cùng lúc; rất tiện lợi!
+F2: Wow! This system is really flexible.
+M2|ja: 日本語のテキストも変換できます。
+F1: You can mix languages in the same batch... isn't that cool?
+M1: Absolutely! Let's try downloading them all as a zip file.

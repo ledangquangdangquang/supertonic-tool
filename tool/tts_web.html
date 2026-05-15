@@ -7,7 +7,7 @@
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0f0f0f; color: #e0e0e0; min-height: 100vh; padding: 2rem; }
-.container { max-width: 800px; margin: 0 auto; }
+.container { max-width: 900px; margin: 0 auto; }
 h1 { text-align: center; margin-bottom: 0.5rem; font-size: 1.8rem; }
 .subtitle { text-align: center; color: #888; margin-bottom: 2rem; font-size: 0.9rem; }
 .status { text-align: center; margin-bottom: 1.5rem; font-size: 0.85rem; }
@@ -16,26 +16,58 @@ h1 { text-align: center; margin-bottom: 0.5rem; font-size: 1.8rem; }
 .dot.disconnected { background: #f44336; }
 .card { background: #1a1a1a; border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem; border: 1px solid #2a2a2a; }
 label { display: block; font-size: 0.85rem; color: #aaa; margin-bottom: 0.4rem; }
-textarea { width: 100%; height: 140px; background: #111; border: 1px solid #333; border-radius: 8px; padding: 0.8rem; color: #e0e0e0; font-size: 0.95rem; resize: vertical; }
-textarea:focus { outline: none; border-color: #5c6bc0; }
-.controls { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; margin-top: 1rem; }
 select, input[type=range] { width: 100%; background: #111; border: 1px solid #333; border-radius: 6px; padding: 0.5rem; color: #e0e0e0; }
 select:focus { outline: none; border-color: #5c6bc0; }
-.speed-wrap { display: flex; align-items: center; gap: 0.5rem; }
-.speed-wrap input { flex: 1; }
 .speed-val { min-width: 40px; text-align: center; font-size: 0.9rem; color: #5c6bc0; }
 .btn-row { display: flex; gap: 1rem; margin-top: 1.5rem; }
-button { flex: 1; padding: 0.8rem; border: none; border-radius: 8px; font-size: 1rem; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+button { padding: 0.8rem 1.2rem; border: none; border-radius: 8px; font-size: 0.95rem; font-weight: 600; cursor: pointer; transition: all 0.2s; }
 button:disabled { opacity: 0.5; cursor: not-allowed; }
-.btn-speak { background: #5c6bc0; color: white; }
+.btn-speak { background: #5c6bc0; color: white; flex: 1; }
 .btn-speak:hover:not(:disabled) { background: #7986cb; }
-.btn-download { background: #2a2a2a; color: #e0e0e0; border: 1px solid #444; }
-.btn-download:hover:not(:disabled) { background: #333; }
 .btn-stop { background: #c62828; color: white; }
 .btn-stop:hover:not(:disabled) { background: #e53935; }
+.btn-secondary { background: #2a2a2a; color: #e0e0e0; border: 1px solid #444; }
+.btn-secondary:hover:not(:disabled) { background: #333; }
+
+/* Queue table */
+.queue-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.8rem; }
+.queue-header h3 { color: #5c6bc0; font-size: 0.95rem; }
+.queue-header .actions { display: flex; gap: 0.5rem; }
+.queue-header button { padding: 0.4rem 0.8rem; font-size: 0.8rem; }
+
+.line-table { width: 100%; border-collapse: collapse; }
+.line-table th { text-align: left; padding: 0.4rem 0.6rem; font-size: 0.75rem; color: #888; border-bottom: 1px solid #333; }
+.line-table td { padding: 0.3rem 0.6rem; border-bottom: 1px solid #222; vertical-align: middle; }
+.line-table tr:hover { background: #222; }
+.line-table tr.playing { background: #1a237e33; }
+.line-table .col-num { width: 30px; color: #666; font-size: 0.8rem; }
+.line-table .col-voice { width: 80px; }
+.line-table .col-lang { width: 80px; }
+.line-table .col-text { }
+.line-table .col-actions { width: 60px; text-align: right; }
+.line-table select { padding: 0.25rem; font-size: 0.8rem; border-radius: 4px; }
+.line-table input[type=text] { width: 100%; background: #111; border: 1px solid #333; border-radius: 4px; padding: 0.4rem 0.6rem; color: #e0e0e0; font-size: 0.9rem; }
+.line-table input[type=text]:focus { outline: none; border-color: #5c6bc0; }
+.line-table .btn-del { background: none; border: none; color: #666; cursor: pointer; font-size: 1.1rem; padding: 0.2rem 0.4rem; }
+.line-table .btn-del:hover { color: #f44336; }
+
+/* Global controls */
+.global-controls { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; margin-bottom: 1rem; padding: 0.8rem; background: #151515; border-radius: 8px; }
+.global-controls label { margin-bottom: 0.2rem; }
+
 .result { margin-top: 1rem; }
 .result audio { width: 100%; margin-top: 0.5rem; }
 .info { font-size: 0.8rem; color: #888; margin-top: 0.5rem; }
+.progress { font-size: 0.85rem; color: #5c6bc0; margin-top: 0.5rem; }
+
+/* Result items */
+.result-item { display: flex; align-items: center; gap: 0.8rem; padding: 0.6rem 0; border-bottom: 1px solid #222; }
+.result-item .ri-label { min-width: 120px; font-size: 0.8rem; color: #aaa; }
+.result-item audio { flex: 1; height: 36px; }
+.result-item .btn-dl { background: #2a2a2a; border: 1px solid #444; color: #ccc; padding: 0.3rem 0.6rem; border-radius: 4px; font-size: 0.75rem; cursor: pointer; white-space: nowrap; }
+.result-item .btn-dl:hover { background: #333; }
+#results { margin-top: 1rem; }
+
 .tips { font-size: 0.85rem; line-height: 1.6; }
 .tips h3 { color: #5c6bc0; margin-bottom: 0.5rem; font-size: 0.95rem; }
 .tips code { background: #222; padding: 2px 6px; border-radius: 4px; font-size: 0.8rem; }
@@ -47,7 +79,7 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 <body>
 <div class="container">
   <h1>🔊 Supertonic TTS</h1>
-  <p class="subtitle">Local Text-to-Speech • GPU Accelerated • 31 Languages</p>
+  <p class="subtitle">Local Text-to-Speech • GPU Accelerated • 31 Languages • Multi-line Queue</p>
 
   <div class="status">
     <span class="dot disconnected" id="statusDot"></span>
@@ -55,17 +87,14 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
   </div>
 
   <div class="card">
-    <label for="text">Enter text</label>
-    <textarea id="text" placeholder="Enter the text to read...&#10;&#10;Use punctuation for natural pauses.&#10;Add <breath> to insert a breath.">Hello, my name is Supertonic. <breath> Welcome to this demo, I'm really glad you're here. Isn't this amazing? Ha ha <laugh> it really works. <sigh> Well, that's all for now, thanks for listening.</textarea>
-
-    <div class="controls">
+    <div class="global-controls">
       <div>
-        <label for="lang">Language</label>
-        <select id="lang"></select>
+        <label>Default Language</label>
+        <select id="defLang"></select>
       </div>
       <div>
-        <label for="voice">Voice</label>
-        <select id="voice"></select>
+        <label>Default Voice</label>
+        <select id="defVoice"></select>
       </div>
       <div>
         <label>Playback speed: <span class="speed-val" id="speedVal">1.05x</span></label>
@@ -73,185 +102,467 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
       </div>
     </div>
 
+    <div class="queue-header">
+      <h3>📝 Dialogue Lines</h3>
+      <div class="actions">
+        <button class="btn-secondary" id="btnAdd">+ Add line</button>
+        <button class="btn-secondary" id="btnImport">📥 Import</button>
+        <button class="btn-secondary" id="btnPaste">📋 Paste multi-line</button>
+        <button class="btn-secondary" id="btnClear">🗑 Clear all</button>
+      </div>
+    </div>
+
+    <table class="line-table">
+      <thead><tr>
+        <th class="col-num">#</th>
+        <th class="col-voice">Voice</th>
+        <th class="col-lang">Lang</th>
+        <th class="col-text">Text</th>
+        <th class="col-actions"></th>
+      </tr></thead>
+      <tbody id="lineBody"></tbody>
+    </table>
+
     <div class="btn-row">
-      <button class="btn-speak" id="btnSpeak" disabled>▶ Convert & Play</button>
-      <button class="btn-download" id="btnDownloadWav" disabled>⬇ WAV (original)</button>
-      <button class="btn-download" id="btnDownloadWebm" disabled>⬇ WebM (with speed)</button>
+      <button class="btn-speak" id="btnPlayAll" disabled>▶ Convert All (Ctrl+Enter)</button>
+      <button class="btn-secondary" id="btnDownloadAll" disabled>⬇ Download All (zip)</button>
       <button class="btn-stop" id="btnStop" disabled>⏹ Stop</button>
     </div>
 
-    <div class="result" id="result" style="display:none">
-      <audio id="audio" controls></audio>
-      <div class="info" id="info"></div>
-    </div>
+    <div class="progress" id="progress"></div>
+    <div id="results"></div>
   </div>
 
   <div class="card tips">
-    <h3>💡 Tips for natural pauses</h3>
+    <h3>💡 Quick Input Tips</h3>
     <table>
-      <tr><th>Method</th><th>Example</th><th>Pause length</th></tr>
-      <tr><td>Comma <code>,</code></td><td>Hello, I am...</td><td>Short</td></tr>
-      <tr><td>Period <code>.</code></td><td>Sentence one. Sentence two.</td><td>~0.3s</td></tr>
-      <tr><td><code>&lt;breath&gt;</code></td><td>Part one &lt;breath&gt; part two</td><td>Breath</td></tr>
-      <tr><td><code>&lt;laugh&gt;</code></td><td>Ha ha &lt;laugh&gt; so fun</td><td>Laughter</td></tr>
-      <tr><td><code>&lt;sigh&gt;</code></td><td>So tired &lt;sigh&gt;</td><td>Sigh</td></tr>
+      <tr><th>Action</th><th>How</th></tr>
+      <tr><td>Add multiple lines at once</td><td>Click <code>Paste multi-line</code> — each line becomes a separate entry</td></tr>
+      <tr><td>Import from file</td><td>Click <code>📥 Import</code> — supports .xlsx, .csv, .txt, .md (markdown table)</td></tr>
+      <tr><td>Set voice per line</td><td>Change the Voice dropdown on each row (e.g. alternate F1/M1 for dialogue)</td></tr>
+      <tr><td>Quick format</td><td><code>F1: Hello!</code> or <code>M2|vi: Xin chào</code> — auto-detects voice/lang prefix</td></tr>
+      <tr><td>Play all</td><td><code>Ctrl+Enter</code> — plays lines sequentially</td></tr>
+      <tr><td>Enter in text field</td><td>Adds a new line below</td></tr>
+    </table>
+  </div>
+
+  <div class="card tips">
+    <h3>🎵 Pauses &amp; Effects (actually supported)</h3>
+    <table>
+      <tr><th>Method</th><th>Example</th><th>Effect</th></tr>
+      <tr><td>Comma <code>,</code></td><td>Hello, how are you?</td><td>Short pause</td></tr>
+      <tr><td>Period <code>.</code></td><td>First sentence. Second sentence.</td><td>~0.3s pause</td></tr>
+      <tr><td>Semicolon <code>;</code></td><td>Part one; part two.</td><td>Medium pause</td></tr>
+      <tr><td>Colon <code>:</code></td><td>Note: this is important.</td><td>Medium pause</td></tr>
+      <tr><td>Exclamation <code>!</code></td><td>Wow! That's great!</td><td>Pause + emphasis</td></tr>
+      <tr><td>Question <code>?</code></td><td>Really? Are you sure?</td><td>Pause + rising tone</td></tr>
+      <tr><td>Ellipsis <code>...</code></td><td>Well... I'm not sure...</td><td>Longer hesitation pause</td></tr>
+      <tr><td><code>&lt;laugh&gt;</code></td><td>Ha ha &lt;laugh&gt; so funny</td><td>✅ Laughter sound</td></tr>
     </table>
   </div>
 </div>
 
+<!-- Import Modal -->
+<div id="importModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:999;align-items:center;justify-content:center;">
+  <div style="background:#1a1a1a;border:1px solid #333;border-radius:12px;padding:1.5rem;width:90%;max-width:700px;max-height:80vh;overflow-y:auto;">
+    <h3 style="color:#5c6bc0;margin-bottom:1rem;">📥 Import Dialogue Lines</h3>
+    <div style="margin-bottom:1rem;">
+      <label>Upload file (.xlsx, .csv, .txt, .md)</label>
+      <input type="file" id="importFile" accept=".xlsx,.csv,.txt,.md" style="background:#111;border:1px solid #333;border-radius:6px;padding:0.5rem;width:100%;color:#e0e0e0;">
+    </div>
+    <div style="margin-bottom:0.8rem;">
+      <label>Or paste content below (text / markdown table / CSV)</label>
+      <textarea id="importText" rows="10" placeholder="Plain text (one line per row)&#10;&#10;Or markdown table:&#10;| Voice | Lang | Text |&#10;|-------|------|------|&#10;| F1    | en   | Hello! |&#10;&#10;Or CSV:&#10;voice,lang,text&#10;F1,en,Hello world" style="width:100%;background:#111;border:1px solid #333;border-radius:6px;padding:0.6rem;color:#e0e0e0;font-family:monospace;font-size:0.85rem;resize:vertical;"></textarea>
+    </div>
+    <div style="display:flex;gap:0.5rem;align-items:center;">
+      <label style="margin:0;white-space:nowrap;">Voice assign:</label>
+      <select id="importVoiceMode" style="width:auto;">
+        <option value="default">Use default voice</option>
+        <option value="alternate">Alternate F1/M1</option>
+        <option value="column">From column (if available)</option>
+      </select>
+    </div>
+    <div style="display:flex;gap:1rem;margin-top:1.2rem;justify-content:flex-end;">
+      <button class="btn-secondary" id="importCancel">Cancel</button>
+      <button class="btn-speak" id="importConfirm" style="flex:none;">Import</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
 const LANGS = {en:"English",vi:"Vietnamese",ko:"Korean",ja:"Japanese",fr:"French",de:"German",es:"Spanish",pt:"Portuguese",it:"Italian",ar:"Arabic",bg:"Bulgarian",cs:"Czech",da:"Danish",el:"Greek",et:"Estonian",fi:"Finnish",hi:"Hindi",hr:"Croatian",hu:"Hungarian",id:"Indonesian",lt:"Lithuanian",lv:"Latvian",nl:"Dutch",pl:"Polish",ro:"Romanian",ru:"Russian",sk:"Slovak",sl:"Slovenian",sv:"Swedish",tr:"Turkish",uk:"Ukrainian"};
+const VOICES = ['F1','F2','F3','F4','F5','M1','M2','M3','M4','M5'];
 
-const langEl = document.getElementById('lang');
-const voiceEl = document.getElementById('voice');
+const defLangEl = document.getElementById('defLang');
+const defVoiceEl = document.getElementById('defVoice');
 const speedEl = document.getElementById('speed');
 const speedVal = document.getElementById('speedVal');
-const textEl = document.getElementById('text');
-const btnSpeak = document.getElementById('btnSpeak');
-const btnDownloadWav = document.getElementById('btnDownloadWav');
-const btnDownloadWebm = document.getElementById('btnDownloadWebm');
+const lineBody = document.getElementById('lineBody');
+const btnPlayAll = document.getElementById('btnPlayAll');
+const btnDownloadAll = document.getElementById('btnDownloadAll');
 const btnStop = document.getElementById('btnStop');
+const btnAdd = document.getElementById('btnAdd');
+const btnPaste = document.getElementById('btnPaste');
+const btnClear = document.getElementById('btnClear');
 const audioEl = document.getElementById('audio');
 const resultEl = document.getElementById('result');
 const infoEl = document.getElementById('info');
+const progressEl = document.getElementById('progress');
 const statusDot = document.getElementById('statusDot');
 const statusText = document.getElementById('statusText');
 
 let ws = null;
-let lastAudioBlob = null;
-let pendingMeta = null;
+let playing = false;
+let stopRequested = false;
+let lines = [];
 
-// Populate lang
-Object.entries(LANGS).forEach(([code, name]) => {
-  langEl.add(new Option(`${name} (${code})`, code));
-});
-langEl.value = 'en';
+// Populate defaults
+Object.entries(LANGS).forEach(([code, name]) => defLangEl.add(new Option(`${name} (${code})`, code)));
+defLangEl.value = 'en';
+VOICES.forEach(v => defVoiceEl.add(new Option(v.startsWith('F') ? `${v} (Female)` : `${v} (Male)`, v)));
+defVoiceEl.value = 'F1';
 
-// Populate voices
-['F1','F2','F3','F4','F5','M1','M2','M3','M4','M5'].forEach(v => {
-  const label = v.startsWith('F') ? `${v} (Female)` : `${v} (Male)`;
-  voiceEl.add(new Option(label, v));
-});
-
-// Speed slider
 speedEl.oninput = () => { speedVal.textContent = parseFloat(speedEl.value).toFixed(2) + 'x'; };
 
-// WebSocket
+// --- Line Management ---
+function parseLine(raw) {
+  // Parse "F1: text" or "M2|vi: text" format
+  const m = raw.match(/^([FM]\d)(?:\|(\w{2}))?\s*:\s*(.+)/i);
+  if (m) return { voice: m[1].toUpperCase(), lang: m[2] || null, text: m[3] };
+  return { voice: null, lang: null, text: raw };
+}
+
+function addLine(text = '', voice = null, lang = null) {
+  lines.push({ text, voice: voice || defVoiceEl.value, lang: lang || defLangEl.value });
+  renderLines();
+  // Focus the new input
+  const inputs = lineBody.querySelectorAll('input[type=text]');
+  if (inputs.length) inputs[inputs.length - 1].focus();
+}
+
+function removeLine(i) {
+  lines.splice(i, 1);
+  renderLines();
+}
+
+function renderLines() {
+  lineBody.innerHTML = '';
+  lines.forEach((line, i) => {
+    const tr = document.createElement('tr');
+    tr.dataset.idx = i;
+    tr.innerHTML = `
+      <td class="col-num">${i + 1}</td>
+      <td class="col-voice"><select data-field="voice">${VOICES.map(v => `<option value="${v}" ${v===line.voice?'selected':''}>${v}</option>`).join('')}</select></td>
+      <td class="col-lang"><select data-field="lang">${Object.entries(LANGS).map(([c,n]) => `<option value="${c}" ${c===line.lang?'selected':''}>${c}</option>`).join('')}</select></td>
+      <td class="col-text"><input type="text" value="${line.text.replace(/"/g,'&quot;')}" data-field="text" placeholder="Enter text..."></td>
+      <td class="col-actions"><span class="btn-del" data-del="${i}">✕</span></td>
+    `;
+    lineBody.appendChild(tr);
+  });
+
+  // Bind events
+  lineBody.querySelectorAll('select, input').forEach(el => {
+    el.addEventListener('change', (e) => {
+      const idx = +e.target.closest('tr').dataset.idx;
+      lines[idx][e.target.dataset.field] = e.target.value;
+    });
+    if (el.type === 'text') {
+      el.addEventListener('input', (e) => {
+        const idx = +e.target.closest('tr').dataset.idx;
+        lines[idx].text = e.target.value;
+      });
+      el.addEventListener('keydown', (e) => {
+        const idx = +e.target.closest('tr').dataset.idx;
+        if (e.key === 'Enter' && !e.ctrlKey) {
+          e.preventDefault();
+          addLine('', lines[idx].voice, lines[idx].lang);
+        }
+        if (e.key === 'Backspace' && e.target.value === '' && lines.length > 1) {
+          e.preventDefault();
+          removeLine(idx);
+          const inputs = lineBody.querySelectorAll('input[type=text]');
+          if (inputs[Math.max(0, idx - 1)]) inputs[Math.max(0, idx - 1)].focus();
+        }
+      });
+    }
+  });
+  lineBody.querySelectorAll('.btn-del').forEach(el => {
+    el.addEventListener('click', () => removeLine(+el.dataset.del));
+  });
+}
+
+// Init with one sample line
+addLine("Hello, my name is Supertonic... Welcome to this demo!", 'F1', 'en');
+addLine("Isn't this amazing? Ha ha <laugh> it really works.", 'M1', 'en');
+addLine("Wait; let me think about that for a moment.", 'F1', 'en');
+addLine("Important note: this system supports thirty one languages!", 'M1', 'en');
+addLine("Wow! I can't believe how natural this sounds!", 'F2', 'en');
+addLine("Well... I'm not entirely sure about that...", 'M2', 'en');
+
+// Buttons
+btnAdd.onclick = () => addLine();
+btnClear.onclick = () => { lines = []; addLine(); };
+btnPaste.onclick = () => {
+  const raw = prompt("Paste multiple lines (one per line).\nOptional format: F1: text  or  M2|vi: text");
+  if (!raw) return;
+  raw.split('\n').filter(l => l.trim()).forEach(l => {
+    const p = parseLine(l.trim());
+    addLine(p.text, p.voice, p.lang);
+  });
+};
+
+// --- Import ---
+const importModal = document.getElementById('importModal');
+const importFile = document.getElementById('importFile');
+const importText = document.getElementById('importText');
+const importVoiceMode = document.getElementById('importVoiceMode');
+const btnImport = document.getElementById('btnImport');
+
+btnImport.onclick = () => { importModal.style.display = 'flex'; importText.value = ''; importFile.value = ''; };
+document.getElementById('importCancel').onclick = () => { importModal.style.display = 'none'; };
+
+document.getElementById('importConfirm').onclick = async () => {
+  let rows = [];
+  if (importFile.files.length) {
+    rows = await parseFile(importFile.files[0]);
+  } else if (importText.value.trim()) {
+    rows = parseContent(importText.value.trim());
+  }
+  if (!rows.length) return alert('No lines found.');
+  applyImport(rows);
+  importModal.style.display = 'none';
+};
+
+// File reader
+async function parseFile(file) {
+  const ext = file.name.split('.').pop().toLowerCase();
+  const buf = await file.arrayBuffer();
+  if (ext === 'xlsx' || ext === 'xls') {
+    const wb = XLSX.read(buf, { type: 'array' });
+    const sheet = wb.Sheets[wb.SheetNames[0]];
+    const data = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+    return parseTableRows(data);
+  }
+  const text = new TextDecoder().decode(buf);
+  if (ext === 'csv') return parseCSV(text);
+  return parseContent(text);
+}
+
+// Detect and parse content string
+function parseContent(text) {
+  // Markdown table?
+  if (text.includes('|') && text.includes('---')) return parseMDTable(text);
+  // CSV with commas and header?
+  const firstLine = text.split('\n')[0];
+  if (firstLine.includes(',') && /voice|lang|text/i.test(firstLine)) return parseCSV(text);
+  // Plain text
+  const textLines = text.split('\n').filter(l => l.trim());
+  // Skip header-like first line
+  const first = textLines[0]?.toLowerCase();
+  if (first && /^(voice|lang|text|speaker|#)[\s,\t|]+/.test(first)) textLines.shift();
+  return textLines.map(l => {
+    const p = parseLine(l.trim());
+    return { text: p.text, voice: p.voice, lang: p.lang };
+  }).filter(r => r.text.trim());
+}
+
+function parseMDTable(text) {
+  const rows = text.split('\n').filter(l => l.includes('|') && !l.match(/^\s*\|?\s*[-:]+/));
+  if (rows.length < 2) return [];
+  const header = rows[0].split('|').map(c => c.trim().toLowerCase()).filter(Boolean);
+  return rows.slice(1).map(row => {
+    const cells = row.split('|').map(c => c.trim()).filter(Boolean);
+    const obj = {};
+    header.forEach((h, i) => { obj[h] = cells[i] || ''; });
+    return normalizeRow(obj);
+  }).filter(r => r.text);
+}
+
+function parseCSV(text) {
+  const rows = text.split('\n').filter(l => l.trim());
+  if (rows.length < 2) return [];
+  const header = rows[0].split(',').map(c => c.trim().toLowerCase().replace(/"/g, ''));
+  return rows.slice(1).map(row => {
+    const cells = row.match(/(".*?"|[^,]+)/g)?.map(c => c.trim().replace(/^"|"$/g, '')) || [];
+    const obj = {};
+    header.forEach((h, i) => { obj[h] = cells[i] || ''; });
+    return normalizeRow(obj);
+  }).filter(r => r.text);
+}
+
+function parseTableRows(data) {
+  if (data.length < 2) return [];
+  const header = data[0].map(c => String(c || '').trim().toLowerCase());
+  return data.slice(1).map(row => {
+    const obj = {};
+    header.forEach((h, i) => { obj[h] = row[i] != null ? String(row[i]).trim() : ''; });
+    return normalizeRow(obj);
+  }).filter(r => r.text);
+}
+
+function normalizeRow(obj) {
+  // Find text column (text, content, dialogue, line, sentence)
+  const textKey = Object.keys(obj).find(k => /text|content|dialogue|line|sentence|nội dung|câu/i.test(k)) || Object.keys(obj).pop();
+  const voiceKey = Object.keys(obj).find(k => /voice|giọng|speaker/i.test(k));
+  const langKey = Object.keys(obj).find(k => /lang|language|ngôn ngữ/i.test(k));
+  return {
+    text: obj[textKey] || '',
+    voice: voiceKey ? obj[voiceKey] : null,
+    lang: langKey ? obj[langKey] : null
+  };
+}
+
+function applyImport(rows) {
+  const mode = importVoiceMode.value;
+  rows.filter(r => r.text && r.text.trim()).forEach((r, i) => {
+    let voice = r.voice;
+    let lang = r.lang;
+    if (mode === 'alternate') voice = i % 2 === 0 ? 'F1' : 'M1';
+    else if (mode === 'default' || !voice) voice = null;
+    if (voice && !VOICES.includes(voice.toUpperCase())) voice = null;
+    if (lang && !LANGS[lang]) lang = null;
+    addLine(r.text, voice ? voice.toUpperCase() : null, lang);
+  });
+}
+
+// --- WebSocket ---
 function connect() {
   ws = new WebSocket('ws://127.0.0.1:8765');
-
   ws.onopen = () => {
     statusDot.className = 'dot connected';
     statusText.textContent = 'Connected';
-    btnSpeak.disabled = false;
+    btnPlayAll.disabled = false;
   };
-
   ws.onclose = () => {
     statusDot.className = 'dot disconnected';
     statusText.textContent = 'Disconnected — retrying...';
-    btnSpeak.disabled = true;
+    btnPlayAll.disabled = true;
     setTimeout(connect, 2000);
   };
-
   ws.onerror = () => ws.close();
-
-  ws.onmessage = (event) => {
-    if (typeof event.data === 'string') {
-      const msg = JSON.parse(event.data);
-      if (msg.status === 'connected') return;
-      if (msg.type === 'audio_meta') {
-        pendingMeta = msg;
-      } else if (msg.type === 'error') {
-        infoEl.textContent = '❌ ' + msg.message;
-        btnSpeak.disabled = false;
-      }
-    } else {
-      // Binary audio
-      lastAudioBlob = new Blob([event.data], { type: 'audio/wav' });
-      const url = URL.createObjectURL(lastAudioBlob);
-      audioEl.src = url;
-      audioEl.playbackRate = parseFloat(speedEl.value);
-      audioEl.preservesPitch = true;
-      audioEl.play();
-      resultEl.style.display = 'block';
-      btnDownloadWav.disabled = false;
-      btnDownloadWebm.disabled = false;
-      btnSpeak.disabled = false;
-      btnStop.disabled = false;
-      if (pendingMeta) {
-        infoEl.textContent = `✓ ${pendingMeta.duration.toFixed(1)}s audio • ${pendingMeta.latency_ms}ms inference • ${(pendingMeta.size/1024).toFixed(0)}KB`;
-      }
-    }
-  };
 }
 connect();
 
-// Speak
-btnSpeak.onclick = () => {
-  const text = textEl.value.trim();
-  if (!text || !ws || ws.readyState !== 1) return;
-  btnSpeak.disabled = true;
-  ws.send(JSON.stringify({
-    text,
-    lang: langEl.value,
-    voice: voiceEl.value,
-  }));
-};
+// --- Synthesize one line (returns promise with audio blob) ---
+function synthesizeLine(text, lang, voice) {
+  return new Promise((resolve, reject) => {
+    if (!ws || ws.readyState !== 1) return reject('Not connected');
+    let meta = null;
+    const handler = (event) => {
+      if (typeof event.data === 'string') {
+        const msg = JSON.parse(event.data);
+        if (msg.type === 'audio_meta') meta = msg;
+        else if (msg.type === 'error') { ws.removeEventListener('message', handler); reject(msg.message); }
+      } else {
+        ws.removeEventListener('message', handler);
+        resolve({ blob: new Blob([event.data], { type: 'audio/wav' }), meta });
+      }
+    };
+    ws.addEventListener('message', handler);
+    ws.send(JSON.stringify({ text, lang, voice }));
+  });
+}
 
-// Download WAV (original speed, no processing)
-btnDownloadWav.onclick = () => {
-  if (!lastAudioBlob) return;
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(lastAudioBlob);
-  a.download = `tts_${voiceEl.value}_${langEl.value}.wav`;
-  a.click();
-};
+// --- Convert All ---
+let allBlobs = [];
+const resultsEl = document.getElementById('results');
 
-// Download WebM with speed applied (uses audio element preservesPitch)
-btnDownloadWebm.onclick = async () => {
-  if (!lastAudioBlob) return;
-  const speed = parseFloat(speedEl.value);
-  btnDownloadWebm.disabled = true;
-  btnDownloadWebm.textContent = '⏺ Recording...';
+btnPlayAll.onclick = async () => {
+  const validLines = lines.filter(l => l.text.trim());
+  if (!validLines.length || !ws || ws.readyState !== 1) return;
 
-  const tempAudio = new Audio(URL.createObjectURL(lastAudioBlob));
-  tempAudio.playbackRate = speed;
-  tempAudio.preservesPitch = true;
-  tempAudio.volume = 1;
+  playing = true;
+  stopRequested = false;
+  btnPlayAll.disabled = true;
+  btnStop.disabled = false;
+  btnDownloadAll.disabled = true;
+  resultsEl.innerHTML = '';
+  allBlobs = [];
 
-  const audioCtx = new AudioContext();
-  const source = audioCtx.createMediaElementSource(tempAudio);
-  const dest = audioCtx.createMediaStreamDestination();
-  source.connect(dest);
+  for (let i = 0; i < validLines.length; i++) {
+    if (stopRequested) break;
+    const line = validLines[i];
+    const label = `#${i+1} [${line.voice}|${line.lang}] ${line.text.slice(0, 30)}`;
+    progressEl.textContent = `Converting ${i + 1} / ${validLines.length}...`;
 
-  const recorder = new MediaRecorder(dest.stream, { mimeType: 'audio/webm;codecs=opus' });
-  const chunks = [];
-  recorder.ondataavailable = (e) => chunks.push(e.data);
-  recorder.onstop = () => {
-    audioCtx.close();
-    const blob = new Blob(chunks, { type: 'audio/webm' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = `tts_${voiceEl.value}_${langEl.value}_${speed}x.webm`;
-    a.click();
-    btnDownloadWebm.disabled = false;
-    btnDownloadWebm.textContent = '⬇ WebM (with speed)';
-  };
+    lineBody.querySelectorAll('tr').forEach(tr => tr.classList.remove('playing'));
+    const row = lineBody.querySelector(`tr[data-idx="${lines.indexOf(line)}"]`);
+    if (row) row.classList.add('playing');
 
-  recorder.start();
-  tempAudio.play();
-  tempAudio.onended = () => recorder.stop();
+    try {
+      const { blob, meta } = await synthesizeLine(line.text, line.lang, line.voice);
+      const fileName = `${String(i+1).padStart(2,'0')}_${line.voice}_${line.lang}_${line.text.slice(0,20).replace(/[^a-zA-Z0-9]/g,'_')}.wav`;
+      allBlobs.push({ blob, fileName });
+      if (stopRequested) break;
+
+      // Create individual result row
+      const div = document.createElement('div');
+      div.className = 'result-item';
+      const info = meta ? `${meta.duration.toFixed(1)}s • ${meta.latency_ms}ms` : '';
+      div.innerHTML = `
+        <span class="ri-label">#${i+1} ${line.voice}|${line.lang} <br><small>${info}</small></span>
+        <audio controls src="${URL.createObjectURL(blob)}" style="flex:1;height:36px"></audio>
+        <button class="btn-dl" data-idx="${allBlobs.length-1}">⬇ ${fileName}</button>
+      `;
+      div.querySelector('audio').playbackRate = parseFloat(speedEl.value);
+      div.querySelector('.btn-dl').onclick = () => {
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = fileName;
+        a.click();
+      };
+      resultsEl.appendChild(div);
+
+      // Auto-play sequentially
+      const audio = div.querySelector('audio');
+      audio.playbackRate = parseFloat(speedEl.value);
+      audio.preservesPitch = true;
+      audio.play();
+      await new Promise(res => { audio.onended = res; audio.onerror = res; });
+
+    } catch (e) {
+      const div = document.createElement('div');
+      div.className = 'result-item';
+      div.innerHTML = `<span class="ri-label" style="color:#f44336">#${i+1} ❌ ${e}</span>`;
+      resultsEl.appendChild(div);
+    }
+  }
+
+  lineBody.querySelectorAll('tr').forEach(tr => tr.classList.remove('playing'));
+  progressEl.textContent = stopRequested ? 'Stopped.' : `Done ✓ (${allBlobs.length} files)`;
+  playing = false;
+  btnPlayAll.disabled = false;
+  btnStop.disabled = true;
+
+  if (allBlobs.length > 0) {
+    btnDownloadAll.disabled = false;
+    btnDownloadAll.onclick = async () => {
+      btnDownloadAll.disabled = true;
+      btnDownloadAll.textContent = '⏳ Zipping...';
+      const zip = new JSZip();
+      allBlobs.forEach(({ blob, fileName }) => zip.file(fileName, blob));
+      const content = await zip.generateAsync({ type: 'blob' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(content);
+      a.download = `tts_batch_${new Date().toISOString().slice(0,10)}.zip`;
+      a.click();
+      btnDownloadAll.disabled = false;
+      btnDownloadAll.textContent = '⬇ Download All (zip)';
+    };
+  }
 };
 
 // Stop
 btnStop.onclick = () => {
-  audioEl.pause();
-  audioEl.currentTime = 0;
+  stopRequested = true;
+  resultsEl.querySelectorAll('audio').forEach(a => { a.pause(); a.currentTime = 0; });
 };
 
-// Ctrl+Enter to speak
-textEl.addEventListener('keydown', (e) => {
-  if (e.ctrlKey && e.key === 'Enter') btnSpeak.click();
+// Ctrl+Enter to convert all
+document.addEventListener('keydown', (e) => {
+  if (e.ctrlKey && e.key === 'Enter') btnPlayAll.click();
 });
 </script>
 </body>

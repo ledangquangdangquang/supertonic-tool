@@ -22,6 +22,16 @@ _TOOL_DIR = Path(__file__).parent
 _REPO_DIR = _TOOL_DIR.parent
 _PY_DIR = _REPO_DIR / "py"
 
+# Add NVIDIA CUDA DLLs from venv to search path
+_VENV_NVIDIA = _PY_DIR / ".venv" / "Lib" / "site-packages" / "nvidia"
+if _VENV_NVIDIA.is_dir():
+    for d in _VENV_NVIDIA.iterdir():
+        for sub in ("bin", "lib"):
+            p = d / sub
+            if p.is_dir():
+                os.add_dll_directory(str(p))
+                os.environ["PATH"] = str(p) + ";" + os.environ.get("PATH", "")
+
 sys.path.insert(0, str(_PY_DIR))
 from helper import load_voice_style, AVAILABLE_LANGS
 import onnxruntime as ort
@@ -33,13 +43,17 @@ def _load_tts_gpu(onnx_dir):
     from helper import TextToSpeech, UnicodeProcessor, load_cfgs, load_onnx_all, load_text_processor
 
     opts = ort.SessionOptions()
+    opts.log_severity_level = 3  # suppress memcpy warnings
     available = ort.get_available_providers()
-    if "DmlExecutionProvider" in available:
-        providers = ["DmlExecutionProvider", "CPUExecutionProvider"]
-        print("Using GPU (DirectML)")
-    elif "CUDAExecutionProvider" in available:
+    if "CUDAExecutionProvider" in available:
         providers = ["CUDAExecutionProvider", "CPUExecutionProvider"]
         print("Using GPU (CUDA)")
+    elif "DmlExecutionProvider" in available:
+        providers = ["DmlExecutionProvider", "CPUExecutionProvider"]
+        # DirectML needs these to avoid GPU command queue overflow
+        opts.enable_mem_pattern = False
+        opts.execution_mode = ort.ExecutionMode.ORT_SEQUENTIAL
+        print("Using GPU (DirectML)")
     else:
         providers = ["CPUExecutionProvider"]
         print("Using CPU")
@@ -65,9 +79,10 @@ class TTSEngine:
                 )
         self.languages = AVAILABLE_LANGS
 
-        # Warmup
+        # Warmup (low step count to avoid DML timeout on first run)
         style = self.voices.get("M1", list(self.voices.values())[0])
-        self.tts("warmup", "en", style, 8, 1.05)
+        self.tts("warmup", "en", style, 4, 1.05)
+        time.sleep(1)
         self.tts("warmup", "en", style, 8, 1.05)
 
     def _load_cpu(self, onnx_dir):
@@ -79,36 +94,117 @@ class TTSEngine:
         return sorted(self.voices.keys())
 
     def synthesize(self, text, lang="en", voice="M1", speed=1.05):
-        style = self.voices.get(voice.upper(), self.voices.get("M1"))
-        lang = lang.split("-")[0]
-        if lang not in self.languages:
-            lang = "en"
+        return self.synthesize_batch([(text, lang, voice, speed)])[0]
 
+    def synthesize_batch(self, items):
+        """items: list of (text, lang, voice, speed). Returns list of (wav_bytes, duration, latency)."""
+        import numpy as np
+        from helper import Style
+
+        # Group by voice (batch requires same style)
+        indexed = sorted(enumerate(items), key=lambda x: x[1][2])
+        results = [None] * len(items)
         t0 = time.perf_counter()
-        for attempt in range(3):
-            try:
-                wav, dur = self.tts(text, lang, style, total_step=8, speed=1.05)
-                break
-            except Exception as e:
-                if attempt < 2:
-                    print(f"[WARN] GPU error (attempt {attempt+1}), retrying...")
-                    time.sleep(0.5)
-                else:
-                    raise RuntimeError(f"GPU failed after 3 attempts: {e}")
 
-        samples = wav[0, : int(self.tts.sample_rate * dur.item())]
-        inference = time.perf_counter() - t0
+        from itertools import groupby
+        for voice_key, group in groupby(indexed, key=lambda x: x[1][2]):
+            group = list(group)
+            style = self.voices.get(voice_key.upper(), self.voices.get("M1"))
+            texts, langs = [], []
+            for idx, (text, lang, voice, speed) in group:
+                lang = lang.split("-")[0]
+                texts.append(text if lang in self.languages else text)
+                langs.append(lang if lang in self.languages else "en")
 
-        buf = io.BytesIO()
-        sf.write(buf, samples, self.tts.sample_rate, format="WAV", subtype="PCM_16")
-        return buf.getvalue(), len(samples) / self.tts.sample_rate, inference
+            batch_style = Style(
+                np.repeat(style.ttl, len(texts), axis=0),
+                np.repeat(style.dp, len(texts), axis=0),
+            )
+
+            for attempt in range(3):
+                try:
+                    wav, dur = self.tts.batch(texts, langs, batch_style, total_step=8, speed=1.05)
+                    break
+                except Exception as e:
+                    if attempt < 2:
+                        print(f"[WARN] GPU error (attempt {attempt+1}), retrying...")
+                        time.sleep(0.5)
+                    else:
+                        raise RuntimeError(f"GPU failed after 3 attempts: {e}")
+
+            for j, (idx, _) in enumerate(group):
+                n_samples = int(self.tts.sample_rate * dur[j].item())
+                samples = wav[j, :n_samples]
+                buf = io.BytesIO()
+                sf.write(buf, samples, self.tts.sample_rate, format="WAV", subtype="PCM_16")
+                results[idx] = (buf.getvalue(), n_samples / self.tts.sample_rate, time.perf_counter() - t0)
+
+        return results
 
 
 # --- WebSocket Server --- #
+BATCH_WAIT_MS = 100  # collect requests for this long before batching
+
 class WSTTSServer:
     def __init__(self, engine, port=8765):
         self.engine = engine
         self.port = port
+        self._gpu_lock = asyncio.Lock()
+        self._batch_queue = asyncio.Queue()
+        self._batch_event = asyncio.Event()
+
+    async def _batch_worker(self):
+        """Collects requests, waits BATCH_WAIT_MS, then processes as batch."""
+        while True:
+            # Wait for first request
+            first = await self._batch_queue.get()
+            batch = [first]
+
+            # Collect more requests within window
+            deadline = asyncio.get_event_loop().time() + BATCH_WAIT_MS / 1000
+            while True:
+                remaining = deadline - asyncio.get_event_loop().time()
+                if remaining <= 0:
+                    break
+                try:
+                    item = await asyncio.wait_for(self._batch_queue.get(), timeout=remaining)
+                    batch.append(item)
+                except asyncio.TimeoutError:
+                    break
+
+            # Process batch
+            async with self._gpu_lock:
+                items = [(req["text"], req["lang"], req["voice"], req["speed"]) for _, req in batch]
+                print(f"[BATCH] Processing {len(items)} items")
+                loop = asyncio.get_event_loop()
+                try:
+                    results = await loop.run_in_executor(None, self.engine.synthesize_batch, items)
+                except Exception as e:
+                    # Send error to all clients
+                    for (ws, req), _ in zip(batch, range(len(batch))):
+                        if ws.close_code is None:
+                            try:
+                                await ws.send(json.dumps({"type": "error", "message": str(e)}))
+                            except Exception:
+                                pass
+                    continue
+
+                # Send results back
+                for (ws, req), result in zip(batch, results):
+                    if ws.close_code is not None or result is None:
+                        continue
+                    audio_bytes, duration, latency = result
+                    try:
+                        await ws.send(json.dumps({
+                            "type": "audio_meta",
+                            "text": req["text"],
+                            "duration": round(duration, 3),
+                            "latency_ms": round(latency * 1000),
+                            "size": len(audio_bytes),
+                        }))
+                        await ws.send(audio_bytes)
+                    except Exception:
+                        pass
 
     async def handle_client(self, websocket):
         try:
@@ -132,32 +228,24 @@ class WSTTSServer:
                     speed = max(0.25, min(4.0, speed))
                     print(f"[TTS] lang={req.get('lang','en')} voice={req.get('voice','M1')} speed={speed} text={text[:40]}")
 
-                    loop = asyncio.get_event_loop()
-                    audio_bytes, duration, latency = await loop.run_in_executor(
-                        None, self.engine.synthesize,
-                        text, req.get("lang", "en"), req.get("voice", "M1"), speed,
-                    )
-
-                    await websocket.send(json.dumps({
-                        "type": "audio_meta",
-                        "duration": round(duration, 3),
-                        "latency_ms": round(latency * 1000),
-                        "size": len(audio_bytes),
+                    await self._batch_queue.put((websocket, {
+                        "text": text,
+                        "lang": req.get("lang", "en"),
+                        "voice": req.get("voice", "M1"),
+                        "speed": speed,
                     }))
-                    await websocket.send(audio_bytes)
 
-                except (asyncio.CancelledError, GeneratorExit):
-                    break
                 except Exception as e:
-                    try:
-                        await websocket.send(json.dumps({"type": "error", "message": str(e)}))
-                    except Exception:
+                    if websocket.close_code is not None:
                         break
         except Exception:
             pass
+        print("[WS] Client disconnected")
 
     async def run(self):
         import websockets
+        # Start batch worker
+        asyncio.create_task(self._batch_worker())
         async with websockets.serve(
             self.handle_client, "127.0.0.1", self.port,
             ping_interval=20,

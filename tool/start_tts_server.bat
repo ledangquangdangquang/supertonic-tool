@@ -5,7 +5,7 @@ echo   Supertonic TTS WebSocket Server
 echo ============================================
 echo.
 echo   Port:     8765
-echo   GPU:      DirectML (auto)
+echo   GPU:      Auto (CUDA ^> DirectML ^> CPU)
 echo.
 echo   Connect:  ws://127.0.0.1:8765
 echo.
@@ -20,6 +20,13 @@ echo ============================================
 echo.
 
 cd /d "%~dp0..\py"
-uv run python "%~dp0ws_tts_server.py" %*
+
+REM Ensure venv exists
+if not exist ".venv\Scripts\python.exe" (
+    echo [setup] Installing dependencies...
+    uv sync
+)
+
+.venv\Scripts\python.exe "%~dp0ws_tts_server.py" %*
 
 pause
