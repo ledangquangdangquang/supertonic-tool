@@ -21,10 +21,26 @@ echo.
 
 cd /d "%~dp0..\py"
 
-REM Ensure venv exists
+where uv >nul 2>nul
+if errorlevel 1 (
+    echo [error] uv is required but was not found in PATH.
+    echo [error] Install uv, then run this launcher again.
+    pause
+    exit /b 1
+)
+
+echo [setup] Syncing dependencies with uv...
+uv sync
+if errorlevel 1 (
+    echo [error] Dependency setup failed.
+    pause
+    exit /b 1
+)
+
 if not exist ".venv\Scripts\python.exe" (
-    echo [setup] Installing dependencies...
-    uv sync
+    echo [error] Python executable not found after setup: .venv\Scripts\python.exe
+    pause
+    exit /b 1
 )
 
 .venv\Scripts\python.exe "%~dp0ws_tts_server.py" %*

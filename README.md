@@ -10,8 +10,8 @@
 
 ## ✨ Highlights
 
-- 🚀 **One-click launcher** — `start_tts_server.bat` auto-installs deps and boots the server.
-- ⚡ **GPU-accelerated** — auto-detects CUDA → DirectML → CPU. No config needed.
+- 🚀 **One-click / one-command launchers** — Windows `.bat` plus Ubuntu/macOS `.sh`, both auto-install deps and boot the server.
+- ⚡ **Accelerated when available** — auto-detects CUDA → DirectML → CoreML → CPU with CPU fallback if an accelerator fails.
 - 🧠 **Batch inference** — multiple requests within a 100 ms window are merged into a single GPU call, so 6 lines render as fast as 1.
 - 🎭 **Multi-line dialogue queue** — assign a different voice/language per line for true conversational TTS.
 - 📥 **Bulk import** — load dialogue from `.xlsx`, `.csv`, `.txt`, or markdown tables.
@@ -25,31 +25,69 @@
 
 | File / Folder | Description |
 |---|---|
-| [`ws_tts_server.py`](tool/ws_tts_server.py) | WebSocket TTS server. Auto-detects GPU (CUDA / DirectML), batches concurrent requests, retries on GPU failure, and handles client disconnect gracefully. |
+| [`ws_tts_server.py`](tool/ws_tts_server.py) | WebSocket TTS server. Auto-detects providers (CUDA / DirectML / CoreML / CPU), batches concurrent requests, retries inference failures, and handles client disconnect gracefully. |
 | [`tts_web.html`](tool/tts_web.html) | Standalone browser client. Multi-line dialogue queue, per-line voice/lang, file import, sequential auto-play, batch ZIP export. No build step. |
-| [`start_tts_server.bat`](tool/start_tts_server.bat) | One-click Windows launcher. Auto-runs `uv sync` on first launch, then starts the server with banner + usage hints. |
+| [`start_tts_server.bat`](tool/start_tts_server.bat) | One-click Windows launcher. Runs `uv sync`, then starts the server with banner + usage hints. |
+| [`start_tts_server.sh`](tool/start_tts_server.sh) | Ubuntu/macOS launcher. Uses `uv sync` when available, falls back to `python3 -m venv` + `pip`, then starts the server. |
 | [`sync_upstream.bat`](tool/sync_upstream.bat) | Pulls latest `upstream/main`, merges into local `main`, and pushes to `origin`. Detects merge conflicts. |
 | [`WEBSOCKET_API.md`](tool/WEBSOCKET_API.md) | Full protocol spec + integration guides (vanilla JS, Chrome MV3 extension with offscreen audio, Node, Python). |
 | [`samples/`](tool/samples/) | Ready-to-import dialogue samples (`.csv`, `.md` table, `.txt` with `F1: text` prefix format). |
 
 ---
 
-## 🚀 Quick Start (Windows)
+## 🚀 Quick Start
 
 **1. Set up the upstream project first** — only needed once, see [Upstream Setup](#-upstream-setup) below.
 
-**2. Start the server:**
+**2. Start the server.**
+
+Windows:
 
 ```bat
 cd tool
 start_tts_server.bat
 ```
 
-The server listens on `ws://127.0.0.1:8765`. First launch warms up the GPU (≈10 s); subsequent inferences are sub-second.
+Ubuntu/macOS:
+
+```bash
+cd tool
+sh start_tts_server.sh
+```
+
+From the repo root, you can also run the Unix launcher directly:
+
+```bash
+chmod +x tool/start_tts_server.sh
+./tool/start_tts_server.sh
+```
+
+The server listens on `ws://127.0.0.1:8765`. First launch warms up the selected provider; subsequent inferences are faster.
 
 **3. Open the web UI:**
 
 Double-click [`tool/tts_web.html`](tool/tts_web.html) — it connects automatically.
+
+---
+
+## ✅ Platform Support
+
+The launchers and dependencies are selected by OS and CPU architecture so the same repo can run on more machines without hand-editing dependency files.
+
+| Platform | Launcher | Default runtime path | Acceleration |
+|---|---|---|---|
+| Windows x64 | `tool/start_tts_server.bat` | `uv sync` → `py/.venv/Scripts/python.exe` | CUDA, DirectML, CPU fallback |
+| Windows ARM64 | `tool/start_tts_server.bat` | `uv sync` → `py/.venv/Scripts/python.exe` | CPU fallback |
+| Ubuntu/Linux x64 | `tool/start_tts_server.sh` | `uv sync` or `python3 -m venv` fallback | CUDA, CPU fallback |
+| Ubuntu/Linux ARM64 | `tool/start_tts_server.sh` | `uv sync` or `python3 -m venv` fallback | CPU fallback |
+| macOS Intel / Apple Silicon | `tool/start_tts_server.sh` | `uv sync` or `python3 -m venv` fallback | CPU fallback; CoreML only if your ONNX Runtime build exposes it |
+
+Recommended prerequisites:
+- Python 3.10+
+- [`uv`](https://docs.astral.sh/uv/) for the most reliable install path
+- `git-lfs` for downloading model assets
+
+The Ubuntu/macOS launcher can fall back to `python3 -m venv` and `pip` if `uv` is not installed. The Windows launcher requires `uv`.
 
 ---
 
@@ -83,19 +121,22 @@ A self-contained HTML page (no build, no server). Open with any modern browser.
 
 ## 🖥️ Server Features (`ws_tts_server.py`)
 
-### GPU auto-detection
+### Provider auto-detection
 At startup, the server probes ONNX Runtime providers in this order:
-1. **CUDA** (NVIDIA) — picks up DLLs from the `.venv/Lib/site-packages/nvidia/*` folders automatically.
-2. **DirectML** (any DX12 GPU on Windows) — sets `enable_mem_pattern=False` and sequential execution to dodge the DirectML command-queue overflow bug.
-3. **CPU** fallback.
+1. **CUDA** (NVIDIA on Windows/Linux x86_64) — picks up bundled CUDA/NVIDIA libraries from the virtualenv when present.
+2. **DirectML** (Windows DX12 GPUs) — sets `enable_mem_pattern=False` and sequential execution to dodge the DirectML command-queue overflow bug.
+3. **CoreML** (macOS, only if the installed ONNX Runtime exposes it).
+4. **CPU** fallback.
 
-Pass `--cpu` to skip GPU detection entirely.
+If an accelerator is detected but fails during initialization or warmup, `auto` mode falls back to CPU instead of crashing the launcher.
+
+Pass `--cpu` to skip accelerator detection entirely, or `--provider cpu|cuda|directml|coreml|auto` to choose a preferred provider.
 
 ### Batch inference
 - Incoming requests are pushed into an `asyncio.Queue`.
 - A worker waits **100 ms** to collect a batch, groups by voice (style), then runs **one** ONNX inference for the whole group.
 - A global `asyncio.Lock` serializes batches → DirectML stays happy.
-- Retry up to 3× on transient GPU errors before surfacing an error to the client.
+- Retry up to 3× on transient inference errors before surfacing an error to the client.
 
 ### Robustness
 - **Warmup on boot** with `total_step=4` then `total_step=8` to avoid DirectML's first-run timeout.
@@ -104,14 +145,37 @@ Pass `--cpu` to skip GPU detection entirely.
 
 ### CLI
 
-```bat
-uv run --project ../py python ws_tts_server.py [--port 8765] [--cpu]
+```bash
+cd tool
+uv run --project ../py python ws_tts_server.py [--port 8765] [--cpu] [--provider auto|cpu|cuda|directml|coreml]
 ```
 
 | Flag | Meaning |
 |---|---|
 | `--port N` | Override the WebSocket port (default `8765`, env `WS_PORT`). |
-| `--cpu` | Force CPU inference and skip GPU detection. |
+| `--provider NAME` | Prefer `auto`, `cpu`, `cuda`, `directml`, or `coreml` (default `auto`, env `TTS_PROVIDER`). |
+| `--cpu` | Shortcut for `--provider cpu`. |
+
+Examples:
+
+```bash
+# Force CPU on any OS
+sh start_tts_server.sh --cpu
+
+# Use a custom port
+sh start_tts_server.sh --port 9000
+
+# Prefer CUDA on Linux
+TTS_PROVIDER=cuda sh start_tts_server.sh
+```
+
+```bat
+REM Force CPU on Windows
+start_tts_server.bat --cpu
+
+REM Use a custom port
+start_tts_server.bat --port 9000
+```
 
 ---
 
@@ -158,7 +222,18 @@ uv sync
 cd ..
 ```
 
-After that, `start_tts_server.bat` handles the rest.
+After that, `start_tts_server.bat` on Windows or `start_tts_server.sh` on Ubuntu/macOS handles the rest.
+
+### Troubleshooting
+
+| Symptom | Fix |
+|---|---|
+| `Missing ONNX assets` | Run the asset setup commands above from the repo root. |
+| `uv is required but was not found` on Windows | Install `uv`, then reopen the terminal and run `tool/start_tts_server.bat` again. |
+| Ubuntu/macOS says `python3 is required` | Install Python 3.10+ for your OS, or install `uv`. |
+| CUDA/DirectML/CoreML fails at startup | Run with `--cpu`; `auto` mode should also fall back to CPU when possible. |
+| Port already in use | Run with `--port 9000`, or set `WS_PORT` before starting the launcher. |
+| macOS is slow | This is expected on CPU fallback. Use shorter batches or fewer concurrent lines. |
 
 ### Keeping in sync with upstream
 

@@ -10,14 +10,16 @@ dependencies = [
     "PyYAML>=6.0",
     "fastapi>=0.136.1",
     "uvicorn>=0.46.0",
-    "onnxruntime-gpu>=1.24.3",
-    "nvidia-cuda-runtime-cu12>=12.9.79",
-    "nvidia-cudnn-cu12>=9.22.0.52",
-    "nvidia-cufft-cu12>=11.4.1.4",
-    "nvidia-curand-cu12>=10.3.10.19",
-    "nvidia-cusolver-cu12>=11.7.5.82",
-    "nvidia-cusparse-cu12>=12.5.10.65",
-    "onnxruntime-directml>=1.24.3",
+    "onnxruntime>=1.23.1,<1.24; sys_platform == 'darwin'",
+    "onnxruntime>=1.23.1; (sys_platform == 'linux' and platform_machine != 'x86_64') or (sys_platform == 'win32' and platform_machine != 'AMD64' and platform_machine != 'x86_64')",
+    "onnxruntime-gpu>=1.24.3; (sys_platform == 'linux' and platform_machine == 'x86_64') or (sys_platform == 'win32' and (platform_machine == 'AMD64' or platform_machine == 'x86_64'))",
+    "nvidia-cuda-runtime-cu12>=12.9.79; (sys_platform == 'linux' and platform_machine == 'x86_64') or (sys_platform == 'win32' and (platform_machine == 'AMD64' or platform_machine == 'x86_64'))",
+    "nvidia-cudnn-cu12>=9.22.0.52; (sys_platform == 'linux' and platform_machine == 'x86_64') or (sys_platform == 'win32' and (platform_machine == 'AMD64' or platform_machine == 'x86_64'))",
+    "nvidia-cufft-cu12>=11.4.1.4; (sys_platform == 'linux' and platform_machine == 'x86_64') or (sys_platform == 'win32' and (platform_machine == 'AMD64' or platform_machine == 'x86_64'))",
+    "nvidia-curand-cu12>=10.3.10.19; (sys_platform == 'linux' and platform_machine == 'x86_64') or (sys_platform == 'win32' and (platform_machine == 'AMD64' or platform_machine == 'x86_64'))",
+    "nvidia-cusolver-cu12>=11.7.5.82; (sys_platform == 'linux' and platform_machine == 'x86_64') or (sys_platform == 'win32' and (platform_machine == 'AMD64' or platform_machine == 'x86_64'))",
+    "nvidia-cusparse-cu12>=12.5.10.65; (sys_platform == 'linux' and platform_machine == 'x86_64') or (sys_platform == 'win32' and (platform_machine == 'AMD64' or platform_machine == 'x86_64'))",
+    "onnxruntime-directml>=1.24.3; sys_platform == 'win32' and (platform_machine == 'AMD64' or platform_machine == 'x86_64')",
     "websockets>=16.0",
     "pyrubberband>=0.4.0",
     "audiotsm>=0.1.2",
@@ -29,4 +31,3 @@ py-modules = []
 [build-system]
 requires = ["setuptools"]
 build-backend = "setuptools.build_meta"
-
