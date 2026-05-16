@@ -64,3 +64,6 @@ htmlcov/
 # OS
 .DS_Store
 Thumbs.db
+
+# --- Fork-private dev scripts (not for upstream / public repo) ---
+tool/sync_upstream.bat
