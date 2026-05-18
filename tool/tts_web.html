@@ -98,7 +98,7 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
       </div>
       <div>
         <label>Playback speed: <span class="speed-val" id="speedVal">1.05x</span></label>
-        <input type="range" id="speed" min="0.5" max="3" step="0.05" value="1.05">
+        <input type="range" id="speed" min="0.7" max="2" step="0.05" value="1.05">
       </div>
     </div>
 
@@ -192,7 +192,7 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
-const LANGS = {en:"English",vi:"Vietnamese",ko:"Korean",ja:"Japanese",fr:"French",de:"German",es:"Spanish",pt:"Portuguese",it:"Italian",ar:"Arabic",bg:"Bulgarian",cs:"Czech",da:"Danish",el:"Greek",et:"Estonian",fi:"Finnish",hi:"Hindi",hr:"Croatian",hu:"Hungarian",id:"Indonesian",lt:"Lithuanian",lv:"Latvian",nl:"Dutch",pl:"Polish",ro:"Romanian",ru:"Russian",sk:"Slovak",sl:"Slovenian",sv:"Swedish",tr:"Turkish",uk:"Ukrainian"};
+const LANGS = {en:"English",vi:"Vietnamese",ko:"Korean",ja:"Japanese",fr:"French",de:"German",es:"Spanish",pt:"Portuguese",it:"Italian",ar:"Arabic",bg:"Bulgarian",cs:"Czech",da:"Danish",el:"Greek",et:"Estonian",fi:"Finnish",hi:"Hindi",hr:"Croatian",hu:"Hungarian",id:"Indonesian",lt:"Lithuanian",lv:"Latvian",nl:"Dutch",pl:"Polish",ro:"Romanian",ru:"Russian",sk:"Slovak",sl:"Slovenian",sv:"Swedish",tr:"Turkish",uk:"Ukrainian",na:"Auto (na)"};
 const VOICES = ['F1','F2','F3','F4','F5','M1','M2','M3','M4','M5'];
 
 const defLangEl = document.getElementById('defLang');

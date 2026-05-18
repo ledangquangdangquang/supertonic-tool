@@ -195,7 +195,6 @@ class TTSEngine:
         try:
             # Low step count first to avoid accelerator timeouts on first run.
             self.tts("warmup", "en", style, 4, 1.05)
-            time.sleep(1)
             self.tts("warmup", "en", style, 8, 1.05)
         except Exception as e:
             if provider_mode == "auto" and self.provider_name != "CPU":
@@ -203,7 +202,6 @@ class TTSEngine:
                 print("[WARN] Reloading with CPU fallback...")
                 self.tts, self.provider_name = _load_tts(str(_REPO_DIR / "assets" / "onnx"), "cpu")
                 self.tts("warmup", "en", style, 4, 1.05)
-                time.sleep(1)
                 self.tts("warmup", "en", style, 8, 1.05)
             else:
                 raise
@@ -242,7 +240,7 @@ class TTSEngine:
 
             for attempt in range(3):
                 try:
-                    wav, dur = self.tts.batch(texts, langs, batch_style, total_step=8, speed=1.05)
+                    wav, dur = self.tts.batch(texts, langs, batch_style, total_step=8, speed=speed)
                     break
                 except Exception as e:
                     if attempt < 2:
@@ -344,7 +342,7 @@ class WSTTSServer:
                         continue
 
                     speed = float(req.get("speed", 1.05))
-                    speed = max(0.25, min(4.0, speed))
+                    speed = max(0.7, min(2.0, speed))
                     print(f"[TTS] lang={req.get('lang','en')} voice={req.get('voice','M1')} speed={speed} text={text[:40]}")
 
                     await self._batch_queue.put((websocket, {
