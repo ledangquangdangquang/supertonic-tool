@@ -8,6 +8,8 @@ results
 results_v3_sdk/
 py/results_all/
 py/test_*.wav
+tool/jobs/
+test/*.mp4
 
 # Python
 __pycache__

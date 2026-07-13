@@ -14,8 +14,9 @@
 - ⚡ **Accelerated when available** — auto-detects CUDA → DirectML → CoreML → CPU with CPU fallback if an accelerator fails.
 - 🧠 **Batch inference** — multiple requests within a 100 ms window are merged into a single GPU call, so 6 lines render as fast as 1.
 - 🎭 **Multi-line dialogue queue** — assign a different voice/language per line for true conversational TTS.
-- 📥 **Bulk import** — load dialogue from `.xlsx`, `.csv`, `.txt`, or markdown tables.
+- 📥 **Bulk import** — load dialogue from `.xlsx`, `.csv`, `.txt`, `.srt`, or markdown tables.
 - 📦 **Batch ZIP download** — convert N lines, get N `.wav` files in one zip.
+- 🎞️ **Video localization MVP** — upload video, transcribe to SRT, translate to Vietnamese, export soft subtitles, and optionally replace audio with Vietnamese TTS voice-over.
 - 🔌 **Open WebSocket API** — drop-in client examples for Browser, Chrome MV3 extension, Node.js, Python.
 - 🔄 **Upstream sync helper** — `sync_upstream.bat` keeps the fork in lock-step with `supertone-inc/supertonic`.
 
@@ -27,8 +28,12 @@
 |---|---|
 | [`ws_tts_server.py`](tool/ws_tts_server.py) | WebSocket TTS server. Auto-detects providers (CUDA / DirectML / CoreML / CPU), batches concurrent requests, retries inference failures, and handles client disconnect gracefully. |
 | [`tts_web.html`](tool/tts_web.html) | Standalone browser client. Multi-line dialogue queue, per-line voice/lang, file import, sequential auto-play, batch ZIP export. No build step. |
+| [`video_pipeline_server.py`](tool/video_pipeline_server.py) | FastAPI video localization server. Extracts audio, transcribes with faster-whisper, translates with Cerebras, muxes soft subtitles, and can generate Vietnamese TTS voice-over. |
+| [`video_localizer_web.html`](tool/video_localizer_web.html) | Browser UI for the video localization MVP. Upload video, watch progress, and download SRT/video outputs. |
 | [`start_tts_server.bat`](tool/start_tts_server.bat) | One-click Windows launcher. Runs `uv sync`, then starts the server with banner + usage hints. |
 | [`start_tts_server.sh`](tool/start_tts_server.sh) | Ubuntu/macOS launcher. Uses `uv sync` when available, falls back to `python3 -m venv` + `pip`, then starts the server. |
+| [`start_video_localizer.bat`](tool/start_video_localizer.bat) | Windows launcher for the video localization server. |
+| [`start_video_localizer.sh`](tool/start_video_localizer.sh) | Ubuntu/macOS launcher for the video localization server. |
 | [`sync_upstream.bat`](tool/sync_upstream.bat) | Pulls latest `upstream/main`, merges into local `main`, and pushes to `origin`. Detects merge conflicts. |
 | [`WEBSOCKET_API.md`](tool/WEBSOCKET_API.md) | Full protocol spec + integration guides (vanilla JS, Chrome MV3 extension with offscreen audio, Node, Python). |
 | [`samples/`](tool/samples/) | Ready-to-import dialogue samples (`.csv`, `.md` table, `.txt` with `F1: text` prefix format). |
@@ -104,7 +109,7 @@ A self-contained HTML page (no build, no server). Open with any modern browser.
 | Action | How |
 |---|---|
 | **Paste multi-line** | Click `📋 Paste multi-line`. Each pasted line becomes a row. Supports `F1: hello` / `M2\|vi: xin chào` shorthand to set voice + lang inline. |
-| **Import file** | Click `📥 Import`. Supports `.xlsx` (via SheetJS), `.csv`, `.md` markdown tables, and plain `.txt`. |
+| **Import file** | Click `📥 Import`. Supports `.xlsx` (via SheetJS), `.csv`, `.md` markdown tables, plain `.txt`, and subtitle `.srt`. |
 | **Voice assignment modes** | *Use default* / *Alternate F1↔M1* (auto-dialogue) / *From column* (read from imported file). |
 
 ### Output
@@ -116,6 +121,51 @@ A self-contained HTML page (no build, no server). Open with any modern browser.
 ### Connection status
 - Live indicator dot (green = connected, red = disconnected).
 - Auto-reconnect on close with 2 s backoff.
+
+---
+
+## 🎞️ Video Localization MVP
+
+The video localizer is a separate tool so the TTS server stays simple. It currently supports this workflow:
+
+```text
+video -> audio.wav -> original.srt -> vi.srt -> MP4 with soft subtitles -> optional Vietnamese dubbed MP4
+```
+
+Prerequisites:
+- `ffmpeg` and `ffprobe` on PATH.
+- Python dependencies installed through `uv sync` or the provided launcher.
+- `CEREBRAS_API_KEY` for Vietnamese translation.
+
+Ubuntu/macOS:
+
+```bash
+export CEREBRAS_API_KEY="your-key"
+chmod +x tool/start_video_localizer.sh
+./tool/start_video_localizer.sh
+```
+
+Windows PowerShell:
+
+```powershell
+$env:CEREBRAS_API_KEY="your-key"
+.\tool\start_video_localizer.bat
+```
+
+Then open:
+
+```text
+http://127.0.0.1:8787
+```
+
+Outputs are saved under `tool/jobs/<job_id>/`:
+- `audio.wav`
+- `original.srt`
+- `vi.srt`
+- `output_soft_subtitles.mp4`
+- `output_vietnamese_only.mp4` when **Vietnamese voice-over** is enabled.
+
+The current voice-over mode replaces the original audio with generated Vietnamese TTS aligned to subtitle timestamps.
 
 ---
 

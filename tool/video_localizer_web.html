@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Supertonic Video Localizer</title>
+<style>
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: #101113;
+  color: #e7e9ed;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+.app {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 24px;
+}
+.topbar {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+h1 {
+  margin: 0;
+  font-size: 1.35rem;
+  font-weight: 700;
+}
+.status {
+  color: #9aa3af;
+  font-size: 0.9rem;
+}
+.layout {
+  display: grid;
+  grid-template-columns: 360px 1fr;
+  gap: 18px;
+  align-items: start;
+}
+.panel {
+  background: #181a1f;
+  border: 1px solid #2b3038;
+  border-radius: 8px;
+  padding: 16px;
+}
+.panel h2 {
+  margin: 0 0 14px;
+  font-size: 0.95rem;
+  color: #b9c2cf;
+}
+label {
+  display: block;
+  margin: 12px 0 6px;
+  color: #aab3bf;
+  font-size: 0.82rem;
+}
+input[type="file"], select {
+  width: 100%;
+  min-height: 38px;
+  border: 1px solid #343a44;
+  border-radius: 6px;
+  background: #111317;
+  color: #e7e9ed;
+  padding: 8px;
+}
+.grid2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.mode {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 40px;
+  padding: 0 10px;
+  border: 1px solid #343a44;
+  border-radius: 6px;
+  background: #111317;
+  color: #c9d1dc;
+  font-size: 0.9rem;
+}
+.mode input { width: 18px; height: 18px; }
+button {
+  width: 100%;
+  min-height: 42px;
+  margin-top: 16px;
+  border: 0;
+  border-radius: 6px;
+  background: #3f6fd8;
+  color: #fff;
+  font-weight: 700;
+  cursor: pointer;
+}
+button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.preview video {
+  width: 100%;
+  max-height: 520px;
+  border-radius: 8px;
+  background: #050506;
+  border: 1px solid #2b3038;
+}
+.progress-wrap {
+  margin-top: 14px;
+  background: #101317;
+  border: 1px solid #2b3038;
+  border-radius: 999px;
+  height: 12px;
+  overflow: hidden;
+}
+.progress-bar {
+  height: 100%;
+  width: 0%;
+  background: #55b685;
+  transition: width 0.25s ease;
+}
+.jobline {
+  margin-top: 12px;
+  color: #b9c2cf;
+  min-height: 22px;
+}
+.error {
+  margin-top: 12px;
+  color: #ff8d8d;
+  white-space: pre-wrap;
+}
+.downloads {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 14px;
+}
+.downloads a {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 38px;
+  padding: 8px;
+  color: #e7e9ed;
+  text-decoration: none;
+  border: 1px solid #39414d;
+  border-radius: 6px;
+  background: #20242b;
+  font-size: 0.86rem;
+  text-align: center;
+}
+.details {
+  margin-top: 14px;
+  color: #88919d;
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+@media (max-width: 820px) {
+  .app { padding: 16px; }
+  .layout { grid-template-columns: 1fr; }
+  .topbar { display: block; }
+  .status { margin-top: 6px; }
+  .downloads { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+<main class="app">
+  <div class="topbar">
+    <h1>Supertonic Video Localizer</h1>
+    <div class="status" id="serverStatus">Ready</div>
+  </div>
+
+  <div class="layout">
+    <section class="panel">
+      <h2>Job Setup</h2>
+      <form id="jobForm">
+        <label for="videoFile">Video file</label>
+        <input id="videoFile" name="file" type="file" accept="video/*,.mkv,.mov,.mp4,.webm,.avi,.m4v" required>
+
+        <div class="grid2">
+          <div>
+            <label for="sourceLang">Source</label>
+            <select id="sourceLang" name="source_lang">
+              <option value="auto">Auto</option>
+              <option value="en">English</option>
+              <option value="vi">Vietnamese</option>
+              <option value="ja">Japanese</option>
+              <option value="ko">Korean</option>
+              <option value="zh">Chinese</option>
+              <option value="fr">French</option>
+              <option value="de">German</option>
+              <option value="es">Spanish</option>
+            </select>
+          </div>
+          <div>
+            <label for="targetLang">Target</label>
+            <select id="targetLang" name="target_lang">
+              <option value="vi">Vietnamese</option>
+            </select>
+          </div>
+        </div>
+
+        <label for="whisperModel">Whisper model</label>
+        <select id="whisperModel" name="whisper_model">
+          <option value="small">small</option>
+          <option value="medium">medium</option>
+          <option value="base">base</option>
+          <option value="tiny">tiny</option>
+        </select>
+
+        <label>Output</label>
+        <div class="mode">
+          <span>Soft subtitles</span>
+          <input type="radio" name="export_mode" value="soft" checked>
+        </div>
+
+        <label class="mode" style="margin-top:10px;">
+          <span>Translate to Vietnamese</span>
+          <input id="translateToggle" type="checkbox" checked>
+        </label>
+
+        <label class="mode" style="margin-top:10px;">
+          <span>Vietnamese voice only</span>
+          <input id="dubToggle" type="checkbox" checked>
+        </label>
+
+        <label for="ttsVoice">Vietnamese voice</label>
+        <select id="ttsVoice" name="tts_voice">
+          <option value="F1">F1</option>
+          <option value="F2">F2</option>
+          <option value="F3">F3</option>
+          <option value="F4">F4</option>
+          <option value="F5">F5</option>
+          <option value="M1">M1</option>
+          <option value="M2">M2</option>
+          <option value="M3">M3</option>
+          <option value="M4">M4</option>
+          <option value="M5">M5</option>
+        </select>
+
+        <button id="startBtn" type="submit">Start</button>
+      </form>
+
+      <div class="details">
+        Set <code>CEREBRAS_API_KEY</code> before starting the server to enable translation.
+      </div>
+    </section>
+
+    <section class="panel preview">
+      <h2>Preview</h2>
+      <video id="videoPreview" controls></video>
+
+      <div class="progress-wrap">
+        <div class="progress-bar" id="progressBar"></div>
+      </div>
+      <div class="jobline" id="jobLine">No job running.</div>
+      <div class="error" id="errorBox"></div>
+      <div class="downloads" id="downloads"></div>
+    </section>
+  </div>
+</main>
+
+<script>
+const form = document.getElementById('jobForm');
+const fileInput = document.getElementById('videoFile');
+const videoPreview = document.getElementById('videoPreview');
+const startBtn = document.getElementById('startBtn');
+const serverStatus = document.getElementById('serverStatus');
+const progressBar = document.getElementById('progressBar');
+const jobLine = document.getElementById('jobLine');
+const errorBox = document.getElementById('errorBox');
+const downloads = document.getElementById('downloads');
+const translateToggle = document.getElementById('translateToggle');
+const dubToggle = document.getElementById('dubToggle');
+
+let pollTimer = null;
+let objectUrl = null;
+
+loadConfig();
+
+fileInput.addEventListener('change', () => {
+  if (objectUrl) URL.revokeObjectURL(objectUrl);
+  const file = fileInput.files[0];
+  if (!file) return;
+  objectUrl = URL.createObjectURL(file);
+  videoPreview.src = objectUrl;
+});
+
+form.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const file = fileInput.files[0];
+  if (!file) return;
+
+  if (pollTimer) clearInterval(pollTimer);
+  downloads.innerHTML = '';
+  errorBox.textContent = '';
+  setProgress(0, 'Uploading video...');
+  startBtn.disabled = true;
+
+  const data = new FormData(form);
+  data.set('translate', translateToggle.checked ? 'true' : 'false');
+  data.set('dub', dubToggle.checked ? 'true' : 'false');
+
+  try {
+    const response = await fetch('/api/jobs', { method: 'POST', body: data });
+    if (!response.ok) throw new Error(await response.text());
+    const job = await response.json();
+    renderJob(job);
+    pollTimer = setInterval(() => pollJob(job.id), 1500);
+  } catch (err) {
+    startBtn.disabled = false;
+    errorBox.textContent = err.message;
+    serverStatus.textContent = 'Error';
+  }
+});
+
+async function pollJob(jobId) {
+  try {
+    const response = await fetch(`/api/jobs/${jobId}`);
+    if (!response.ok) throw new Error(await response.text());
+    const job = await response.json();
+    renderJob(job);
+    if (job.status === 'done' || job.status === 'error') {
+      clearInterval(pollTimer);
+      pollTimer = null;
+      startBtn.disabled = false;
+    }
+  } catch (err) {
+    clearInterval(pollTimer);
+    pollTimer = null;
+    startBtn.disabled = false;
+    errorBox.textContent = err.message;
+    serverStatus.textContent = 'Error';
+  }
+}
+
+function renderJob(job) {
+  serverStatus.textContent = job.status;
+  setProgress(job.progress || 0, `${job.step} (${job.progress || 0}%)`);
+  errorBox.textContent = job.error || '';
+  downloads.innerHTML = '';
+
+  const labels = {
+    output_dubbed_video: 'DOWNLOAD THIS: Vietnamese-only voice video',
+    output_video: 'Subtitled video (original audio)',
+    vi_srt: 'Vietnamese SRT',
+    original_srt: 'Original SRT',
+    audio: 'Extracted audio',
+    input: 'Input video'
+  };
+  const order = [
+    'output_dubbed_video',
+    'output_video',
+    'vi_srt',
+    'original_srt',
+    'audio',
+    'input'
+  ];
+  const downloadEntries = Object.entries(job.downloads || {}).sort(
+    ([a], [b]) => order.indexOf(a) - order.indexOf(b)
+  );
+
+  downloadEntries.forEach(([kind, url]) => {
+    const a = document.createElement('a');
+    a.href = url;
+    a.textContent = labels[kind] || kind;
+    downloads.appendChild(a);
+  });
+}
+
+function setProgress(value, text) {
+  progressBar.style.width = `${Math.max(0, Math.min(100, value))}%`;
+  jobLine.textContent = text;
+}
+
+async function loadConfig() {
+  try {
+    const response = await fetch('/api/config');
+    if (!response.ok) return;
+    const config = await response.json();
+    if (!config.has_cerebras_api_key) {
+      translateToggle.checked = false;
+      dubToggle.checked = false;
+      serverStatus.textContent = 'Ready, translation key missing';
+    } else {
+      serverStatus.textContent = `Ready, ${config.cerebras_model}`;
+    }
+  } catch (_err) {
+    serverStatus.textContent = 'Ready';
+  }
+}
+</script>
+</body>
+</html>
