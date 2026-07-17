@@ -134,7 +134,7 @@ def config():
         "cerebras_model": os.environ.get("CEREBRAS_MODEL", "gpt-oss-120b"),
         "ollama_available": ollama_available,
         "ollama_model_available": ollama_model_available,
-        "ollama_model": os.environ.get("OLLAMA_MODEL", "qwen3:4b"),
+        "ollama_model": os.environ.get("OLLAMA_MODEL", "gemma3:4b"),
         "ollama_error": ollama_error,
     }
 
