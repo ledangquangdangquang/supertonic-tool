@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import re
+import textwrap
 
 
 TIMECODE_RE = re.compile(
@@ -54,12 +55,24 @@ def parse_srt(content: str) -> list[SubtitleBlock]:
     return blocks
 
 
-def write_srt(blocks: list[SubtitleBlock]) -> str:
+def write_srt(blocks: list[SubtitleBlock], wrap_chars: int = 42) -> str:
     parts = []
     for fallback_index, block in enumerate(blocks, 1):
         index = block.index or fallback_index
-        parts.append(f"{index}\n{block.start} --> {block.end}\n{block.text.strip()}")
+        text = wrap_subtitle_text(block.text.strip(), max_chars=wrap_chars)
+        parts.append(f"{index}\n{block.start} --> {block.end}\n{text}")
     return "\n\n".join(parts) + "\n"
+
+
+def wrap_subtitle_text(text: str, max_chars: int = 42) -> str:
+    lines = text.split("\n")
+    wrapped: list[str] = []
+    for line in lines:
+        if len(line) <= max_chars:
+            wrapped.append(line)
+        else:
+            wrapped.extend(textwrap.fill(line, width=max_chars, break_long_words=False).split("\n"))
+    return "\n".join(wrapped)
 
 
 def seconds_to_srt_time(seconds: float) -> str:

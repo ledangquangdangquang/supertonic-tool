@@ -16,7 +16,7 @@
 - 🎭 **Multi-line dialogue queue** — assign a different voice/language per line for true conversational TTS.
 - 📥 **Bulk import** — load dialogue from `.xlsx`, `.csv`, `.txt`, `.srt`, or markdown tables.
 - 📦 **Batch ZIP download** — convert N lines, get N `.wav` files in one zip.
-- 🎞️ **Video localization MVP** — upload video, transcribe to SRT, translate to Vietnamese, export soft subtitles, and optionally replace audio with Vietnamese TTS voice-over.
+- 🎞️ **Video localization MVP** — upload video, transcribe to SRT, translate locally with Ollama or through Cerebras, optionally replace audio with Vietnamese TTS voice-over, and burn Vietnamese subtitles into the final MP4.
 - 🔌 **Open WebSocket API** — drop-in client examples for Browser, Chrome MV3 extension, Node.js, Python.
 - 🔄 **Upstream sync helper** — `sync_upstream.bat` keeps the fork in lock-step with `supertone-inc/supertonic`.
 
@@ -28,7 +28,7 @@
 |---|---|
 | [`ws_tts_server.py`](tool/ws_tts_server.py) | WebSocket TTS server. Auto-detects providers (CUDA / DirectML / CoreML / CPU), batches concurrent requests, retries inference failures, and handles client disconnect gracefully. |
 | [`tts_web.html`](tool/tts_web.html) | Standalone browser client. Multi-line dialogue queue, per-line voice/lang, file import, sequential auto-play, batch ZIP export. No build step. |
-| [`video_pipeline_server.py`](tool/video_pipeline_server.py) | FastAPI video localization server. Extracts audio, transcribes with faster-whisper, translates with Cerebras, muxes soft subtitles, and can generate Vietnamese TTS voice-over. |
+| [`video_pipeline_server.py`](tool/video_pipeline_server.py) | FastAPI video localization server. Extracts audio, transcribes with faster-whisper, translates with Cerebras, generates Vietnamese TTS voice-over, and exports soft-subtitle and burned-subtitle MP4 files. |
 | [`video_localizer_web.html`](tool/video_localizer_web.html) | Browser UI for the video localization MVP. Upload video, watch progress, and download SRT/video outputs. |
 | [`start_tts_server.bat`](tool/start_tts_server.bat) | One-click Windows launcher. Runs `uv sync`, then starts the server with banner + usage hints. |
 | [`start_tts_server.sh`](tool/start_tts_server.sh) | Ubuntu/macOS launcher. Uses `uv sync` when available, falls back to `python3 -m venv` + `pip`, then starts the server. |
@@ -129,13 +129,14 @@ A self-contained HTML page (no build, no server). Open with any modern browser.
 The video localizer is a separate tool so the TTS server stays simple. It currently supports this workflow:
 
 ```text
-video -> audio.wav -> original.srt -> vi.srt -> MP4 with soft subtitles -> optional Vietnamese dubbed MP4
+video -> audio.wav -> original.srt -> vi.srt -> Vietnamese TTS -> MP4 with burned Vietnamese subtitles
 ```
 
 Prerequisites:
 - `ffmpeg` and `ffprobe` on PATH.
 - Python dependencies installed through `uv sync` or the provided launcher.
-- `CEREBRAS_API_KEY` for Vietnamese translation.
+- For local Vietnamese translation: Ollama with `qwen3:4b` (`ollama pull qwen3:4b`).
+- Optional Cerebras fallback: `CEREBRAS_API_KEY`. The local web UI shows a masked status hint when a server key is configured.
 
 Ubuntu/macOS:
 
@@ -164,6 +165,7 @@ Outputs are saved under `tool/jobs/<job_id>/`:
 - `vi.srt`
 - `output_soft_subtitles.mp4`
 - `output_vietnamese_only.mp4` when **Vietnamese voice-over** is enabled.
+- `output_vietnamese_burned.mp4` with Vietnamese subtitles rendered directly into the video frames.
 
 The current voice-over mode replaces the original audio with generated Vietnamese TTS aligned to subtitle timestamps.
 

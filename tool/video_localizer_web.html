@@ -1,303 +1,514 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="vi">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Supertonic Video Localizer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/tokens.css">
 <style>
+/* Hallmark · genre: playful · macrostructure: Workbench · theme: Hum · enrichment: live video preview · nav: N7 · footer: Ft5
+ * audience: technical users · use: Vietnamese dubbing with burned subtitles · tone: playful
+ * pre-emit critique: P5 H5 E4 S5 R4 V5 · contrast: pass (40–41) · slop: pass (42–45)
+ * honest: pass (46) · chrome: pass (47) · tokens: pass (48) · mobile: pass (34, 49–57)
+ */
 * { box-sizing: border-box; }
+html, body { margin: 0; min-height: 100%; overflow-x: clip; }
 body {
-  margin: 0;
-  min-height: 100vh;
-  background: #101113;
-  color: #e7e9ed;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-}
-.app {
-  max-width: 1180px;
-  margin: 0 auto;
-  padding: 24px;
-}
-.topbar {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 16px;
-  margin-bottom: 18px;
-}
-h1 {
-  margin: 0;
-  font-size: 1.35rem;
-  font-weight: 700;
-}
-.status {
-  color: #9aa3af;
-  font-size: 0.9rem;
-}
-.layout {
-  display: grid;
-  grid-template-columns: 360px 1fr;
-  gap: 18px;
-  align-items: start;
-}
-.panel {
-  background: #181a1f;
-  border: 1px solid #2b3038;
-  border-radius: 8px;
-  padding: 16px;
-}
-.panel h2 {
-  margin: 0 0 14px;
-  font-size: 0.95rem;
-  color: #b9c2cf;
-}
-label {
-  display: block;
-  margin: 12px 0 6px;
-  color: #aab3bf;
-  font-size: 0.82rem;
-}
-input[type="file"], select {
-  width: 100%;
-  min-height: 38px;
-  border: 1px solid #343a44;
-  border-radius: 6px;
-  background: #111317;
-  color: #e7e9ed;
-  padding: 8px;
-}
-.grid2 {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-}
-.mode {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  min-height: 40px;
-  padding: 0 10px;
-  border: 1px solid #343a44;
-  border-radius: 6px;
-  background: #111317;
-  color: #c9d1dc;
-  font-size: 0.9rem;
-}
-.mode input { width: 18px; height: 18px; }
-button {
-  width: 100%;
-  min-height: 42px;
-  margin-top: 16px;
-  border: 0;
-  border-radius: 6px;
-  background: #3f6fd8;
-  color: #fff;
-  font-weight: 700;
-  cursor: pointer;
-}
-button:disabled {
-  opacity: 0.55;
-  cursor: not-allowed;
-}
-.preview video {
-  width: 100%;
-  max-height: 520px;
-  border-radius: 8px;
-  background: #050506;
-  border: 1px solid #2b3038;
-}
-.progress-wrap {
-  margin-top: 14px;
-  background: #101317;
-  border: 1px solid #2b3038;
-  border-radius: 999px;
-  height: 12px;
-  overflow: hidden;
-}
-.progress-bar {
-  height: 100%;
-  width: 0%;
-  background: #55b685;
-  transition: width 0.25s ease;
-}
-.jobline {
-  margin-top: 12px;
-  color: #b9c2cf;
-  min-height: 22px;
-}
-.error {
-  margin-top: 12px;
-  color: #ff8d8d;
-  white-space: pre-wrap;
-}
-.downloads {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
-  margin-top: 14px;
-}
-.downloads a {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 38px;
-  padding: 8px;
-  color: #e7e9ed;
-  text-decoration: none;
-  border: 1px solid #39414d;
-  border-radius: 6px;
-  background: #20242b;
-  font-size: 0.86rem;
-  text-align: center;
-}
-.details {
-  margin-top: 14px;
-  color: #88919d;
-  font-size: 0.82rem;
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-body);
+  font-size: var(--text-base);
   line-height: 1.5;
 }
-@media (max-width: 820px) {
-  .app { padding: 16px; }
-  .layout { grid-template-columns: 1fr; }
-  .topbar { display: block; }
-  .status { margin-top: 6px; }
-  .downloads { grid-template-columns: 1fr; }
+button, input, select { font: inherit; }
+button, a, select, .file-drop { -webkit-tap-highlight-color: transparent; }
+:focus-visible { outline: 3px solid var(--color-focus); outline-offset: 3px; }
+
+.nav-slab {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md);
+  min-height: 4rem;
+  padding: var(--space-sm) var(--page-gutter);
+  border-block-end: var(--rule-strong) solid var(--color-ink);
+  background: var(--color-paper);
 }
+.brand { display: flex; align-items: center; gap: var(--space-sm); min-width: 0; }
+.brand-mark {
+  width: 2rem;
+  height: 2rem;
+  border: var(--rule-strong) solid var(--color-ink);
+  border-radius: 50%;
+  background: var(--color-accent);
+  box-shadow: inset -0.3rem -0.2rem 0 var(--color-accent-deep);
+  animation: breathe 4s var(--ease-in-out) infinite;
+}
+.brand-name {
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: 0.025em;
+  white-space: nowrap;
+}
+.brand-suffix { display: none; }
+.server-state {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  min-height: 2.25rem;
+  padding-inline: var(--space-sm);
+  border: var(--rule-hair) solid var(--color-rule-2);
+  border-radius: var(--radius-pill);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  white-space: nowrap;
+}
+.server-state::before { content: ""; width: 0.55rem; height: 0.55rem; border-radius: 50%; background: var(--color-success); }
+.server-state[data-state="error"]::before { background: var(--color-error); }
+.server-state[data-state="running"]::before { background: var(--color-accent-3); }
+
+.workbench {
+  width: min(100%, var(--page-max));
+  margin-inline: auto;
+  padding: var(--space-lg) var(--page-gutter) var(--space-3xl);
+}
+.bench-head { display: grid; gap: var(--space-xs); margin-block-end: var(--space-lg); }
+.bench-head h1 {
+  min-width: 0;
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  line-height: 1.08;
+  letter-spacing: -0.025em;
+  overflow-wrap: anywhere;
+}
+.bench-head p { margin: 0; color: var(--color-muted); max-width: 68ch; }
+.bench-grid { display: grid; gap: var(--space-lg); align-items: start; }
+
+.setup,
+.preview-panel {
+  border: var(--rule-strong) solid var(--color-ink);
+  border-radius: var(--radius-card);
+  background: var(--color-paper-2);
+  box-shadow: 0 0.65rem 0 var(--color-ink);
+  overflow: clip;
+}
+.panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md);
+  min-height: 3.25rem;
+  padding: var(--space-sm) var(--space-md);
+  border-block-end: var(--rule-strong) solid var(--color-ink);
+  background: var(--color-accent);
+}
+.panel-head h2 { margin: 0; font-size: var(--text-base); font-weight: 700; }
+.panel-code { font-family: var(--font-mono); font-size: var(--text-xs); white-space: nowrap; }
+.setup form { display: grid; gap: var(--space-md); padding: var(--space-md); }
+
+.file-input { position: absolute; inline-size: 1px; block-size: 1px; opacity: 0; pointer-events: none; }
+.file-drop {
+  display: grid;
+  place-items: center;
+  gap: var(--space-xs);
+  min-height: 7.5rem;
+  padding: var(--space-lg);
+  border: var(--rule-strong) dashed var(--color-rule-2);
+  border-radius: var(--radius-input);
+  background: var(--color-paper);
+  text-align: center;
+  cursor: pointer;
+  transition: transform var(--dur-short) var(--ease-out), background-color var(--dur-short) var(--ease-out);
+}
+.file-drop strong { font-size: var(--text-lg); }
+.file-drop small { color: var(--color-muted); }
+.file-drop[data-state="filled"] { border-style: solid; background: var(--color-accent-2-soft); }
+.file-drop[data-state="error"] { border-color: var(--color-error); background: var(--color-error-soft); }
+.file-drop:focus-within { outline: 3px solid var(--color-focus); outline-offset: 3px; }
+
+.field-grid { display: grid; gap: var(--space-md); }
+.field { display: grid; gap: var(--space-xs); min-width: 0; }
+.field label, .field-label { font-size: var(--text-sm); font-weight: 600; }
+.field-help { min-height: 1lh; color: var(--color-muted); font-size: var(--text-xs); }
+select {
+  width: 100%;
+  min-height: 2.75rem;
+  padding-inline: var(--space-sm) 2rem;
+  border: var(--rule-hair) solid var(--color-rule-2);
+  border-radius: var(--radius-input);
+  outline: 2px solid transparent;
+  outline-offset: 1px;
+  background: var(--color-paper);
+  color: var(--color-ink);
+}
+select:focus-visible { outline-color: var(--color-focus); }
+select:active { background: var(--color-paper-2); }
+select[aria-invalid="true"] { border-color: var(--color-error); background: var(--color-error-soft); }
+select[data-state="success"] { border-color: var(--color-success); }
+select[data-state="loading"] { cursor: progress; }
+select:disabled { opacity: 0.55; cursor: not-allowed; }
+
+.output-card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--space-sm);
+  align-items: start;
+  padding: var(--space-md);
+  border: var(--rule-hair) solid var(--color-rule-2);
+  border-radius: var(--radius-input);
+  background: var(--color-accent-3-soft);
+}
+.output-card input { width: 1.25rem; height: 1.25rem; margin: var(--space-2xs) 0 0; accent-color: var(--color-error); }
+.output-card strong, .output-card small { display: block; }
+.output-card small { margin-block-start: var(--space-2xs); color: var(--color-muted); }
+.switches { display: grid; gap: var(--space-xs); }
+.switch {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md);
+  min-height: 3rem;
+  padding-inline: var(--space-sm);
+  border: var(--rule-hair) solid var(--color-rule);
+  border-radius: var(--radius-input);
+  background: var(--color-paper);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+.switch input { width: 1.25rem; height: 1.25rem; accent-color: var(--color-success); }
+
+.btn {
+  --btn-face: var(--color-accent);
+  --btn-edge: var(--color-accent-deep);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-xs);
+  min-height: 3rem;
+  padding-inline: var(--space-lg);
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: var(--btn-face);
+  color: var(--color-accent-ink);
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+  box-shadow: 0 4px 0 var(--btn-edge), 0 6px 12px -3px var(--color-rule);
+  transform: translateY(0);
+  transition: transform 140ms var(--ease-out), box-shadow 140ms var(--ease-out), background-color var(--dur-short) var(--ease-out);
+}
+.btn:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--btn-edge); transition-duration: 70ms; }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: 0 4px 0 var(--btn-edge); }
+.btn[data-state="loading"]::before {
+  content: "";
+  width: 1rem;
+  height: 1rem;
+  border: var(--rule-strong) solid var(--color-accent-ink);
+  border-block-start-color: transparent;
+  border-radius: 50%;
+  animation: spin 700ms linear infinite;
+}
+.btn[data-state="success"] { --btn-face: var(--color-success-soft); --btn-edge: var(--color-success); }
+.btn[data-state="error"] { --btn-face: var(--color-error-soft); --btn-edge: var(--color-error); }
+
+.config-note {
+  margin: 0;
+  padding: var(--space-sm);
+  border-radius: var(--radius-input);
+  background: var(--color-accent-2-soft);
+  color: var(--color-ink-2);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+}
+
+.preview-panel { background: var(--color-paper); }
+.preview-panel .panel-head { background: var(--color-accent-2-soft); }
+.screen { padding: var(--space-md); }
+.screen video {
+  display: block;
+  width: 100%;
+  max-height: 62svh;
+  border: var(--rule-strong) solid var(--color-ink);
+  border-radius: var(--radius-input);
+  background: var(--color-video);
+  aspect-ratio: 16 / 9;
+}
+.empty-copy { margin: var(--space-sm) 0 0; color: var(--color-muted); font-size: var(--text-sm); }
+
+.pipeline { padding: 0 var(--space-md) var(--space-md); }
+.pipeline ol { display: grid; gap: var(--space-xs); margin: 0; padding: 0; list-style: none; }
+.pipeline li {
+  display: grid;
+  grid-template-columns: 2rem minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-sm);
+  min-height: 2.75rem;
+  padding: var(--space-xs) var(--space-sm);
+  border: var(--rule-hair) solid var(--color-rule);
+  border-radius: var(--radius-input);
+  color: var(--color-muted);
+}
+.step-num { font-family: var(--font-mono); font-size: var(--text-xs); }
+.step-state { font-family: var(--font-mono); font-size: var(--text-xs); }
+.pipeline li[data-state="active"] { background: var(--color-accent); color: var(--color-ink); border-color: var(--color-accent-deep); }
+.pipeline li[data-state="done"] { background: var(--color-success-soft); color: var(--color-ink); border-color: var(--color-success); }
+.progress-track { height: 0.75rem; margin-block: var(--space-md) var(--space-sm); border: var(--rule-hair) solid var(--color-ink); border-radius: var(--radius-pill); background: var(--color-paper-3); overflow: clip; }
+.progress-bar { width: 100%; height: 100%; background: var(--color-accent-3); transform: scaleX(0); transform-origin: left center; transition: transform var(--dur-medium) linear; }
+.jobline { min-height: 1.5rem; margin: 0; color: var(--color-ink-2); font-family: var(--font-mono); font-size: var(--text-sm); }
+.error { min-height: 0; margin-block-start: var(--space-xs); padding: 0; color: var(--color-error); white-space: pre-wrap; }
+.error:not(:empty) { padding: var(--space-sm); border: var(--rule-hair) solid var(--color-error); border-radius: var(--radius-input); background: var(--color-error-soft); }
+
+.outputs { display: grid; gap: var(--space-sm); padding: 0 var(--space-md) var(--space-md); }
+.outputs:empty { display: none; }
+.download {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--space-sm);
+  align-items: center;
+  min-height: 3rem;
+  padding: var(--space-sm) var(--space-md);
+  border: var(--rule-hair) solid var(--color-rule-2);
+  border-radius: var(--radius-input);
+  background: var(--color-paper-2);
+  color: var(--color-ink);
+  font-weight: 600;
+  text-decoration: none;
+}
+.download::after { content: "↓"; font-family: var(--font-mono); }
+.download[data-primary="true"] { border: var(--rule-strong) solid var(--color-ink); background: var(--color-accent); }
+
+.foot-stmt {
+  display: grid;
+  gap: var(--space-lg);
+  padding: var(--space-2xl) var(--page-gutter) max(var(--space-xl), env(safe-area-inset-bottom));
+  border-block-start: var(--rule-strong) solid var(--color-ink);
+  background: var(--color-accent-2-soft);
+}
+.foot-stmt__line { max-width: 24ch; margin: 0; font-family: var(--font-display); font-size: var(--text-2xl); font-weight: 600; line-height: 1.1; letter-spacing: -0.025em; }
+.foot-stmt__meta { display: flex; flex-wrap: wrap; justify-content: space-between; gap: var(--space-sm); padding-block-start: var(--space-sm); border-block-start: var(--rule-hair) solid var(--color-rule-2); font-family: var(--font-mono); font-size: var(--text-xs); }
+
+@media (hover: hover) and (pointer: fine) {
+  .file-drop:hover { transform: translateY(-2px); background: var(--color-paper-3); }
+  .btn:hover { transform: translateY(-2px); box-shadow: 0 6px 0 var(--btn-edge), 0 12px 22px -4px var(--color-rule); }
+  .download:hover { background: var(--color-accent-2-soft); }
+  select:hover { background: var(--color-paper-2); }
+}
+@media (min-width: 40rem) {
+  .brand-suffix { display: inline; }
+  .field-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .pipeline ol { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (min-width: 64rem) {
+  .workbench { padding-block-start: var(--space-xl); }
+  .bench-head { grid-template-columns: minmax(0, 1fr) minmax(18rem, 0.8fr); align-items: end; }
+  .bench-grid { grid-template-columns: minmax(20rem, 25rem) minmax(0, 1fr); }
+  .setup { position: sticky; top: var(--space-md); }
+}
+@media (pointer: coarse) { .btn, select, .download { min-height: 3rem; } }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+  .file-drop, .btn { transform: none !important; }
+}
+@keyframes spin { to { transform: rotate(1turn); } }
+@keyframes breathe { 50% { transform: scale(1.04); } }
 </style>
 </head>
 <body>
-<main class="app">
-  <div class="topbar">
-    <h1>Supertonic Video Localizer</h1>
-    <div class="status" id="serverStatus">Ready</div>
-  </div>
+<header class="nav-slab">
+  <div class="brand"><span class="brand-mark" aria-hidden="true"></span><span class="brand-name">SUPERTONIC<span class="brand-suffix"> LOCALIZER</span></span></div>
+  <div class="server-state" id="serverStatus" data-state="ready" role="status">READY</div>
+</header>
 
-  <div class="layout">
-    <section class="panel">
-      <h2>Job Setup</h2>
+<main class="workbench">
+  <header class="bench-head">
+    <h1>Lồng tiếng Việt. Phụ đề nằm luôn trên hình.</h1>
+    <p>Một workbench cục bộ: Whisper tạo timecode, Cerebras dịch, Supertonic đọc và FFmpeg burn phụ đề vào MP4 cuối.</p>
+  </header>
+
+  <div class="bench-grid">
+    <section class="setup" aria-labelledby="setupTitle">
+      <header class="panel-head"><h2 id="setupTitle">Thiết lập job</h2><span class="panel-code">INPUT → MP4</span></header>
       <form id="jobForm">
-        <label for="videoFile">Video file</label>
-        <input id="videoFile" name="file" type="file" accept="video/*,.mkv,.mov,.mp4,.webm,.avi,.m4v" required>
+        <div>
+          <input class="file-input" id="videoFile" name="file" type="file" accept="video/*,.mkv,.mov,.mp4,.webm,.avi,.m4v" required aria-required="true">
+          <label class="file-drop" id="fileDrop" for="videoFile" tabindex="0">
+            <strong id="fileName">Chọn hoặc thả video</strong>
+            <small id="fileMeta">MP4 · MOV · MKV · WEBM · AVI · M4V</small>
+          </label>
+        </div>
 
-        <div class="grid2">
-          <div>
-            <label for="sourceLang">Source</label>
+        <div class="field-grid">
+          <div class="field">
+            <label for="sourceLang">Ngôn ngữ nguồn</label>
             <select id="sourceLang" name="source_lang">
-              <option value="auto">Auto</option>
-              <option value="en">English</option>
-              <option value="vi">Vietnamese</option>
-              <option value="ja">Japanese</option>
-              <option value="ko">Korean</option>
-              <option value="zh">Chinese</option>
-              <option value="fr">French</option>
-              <option value="de">German</option>
-              <option value="es">Spanish</option>
+              <option value="auto">Tự nhận diện</option><option value="en">English</option><option value="vi">Vietnamese</option>
+              <option value="ja">Japanese</option><option value="ko">Korean</option><option value="zh">Chinese</option>
+              <option value="fr">French</option><option value="de">German</option><option value="es">Spanish</option>
             </select>
+            <span class="field-help">Whisper language hint</span>
           </div>
-          <div>
-            <label for="targetLang">Target</label>
-            <select id="targetLang" name="target_lang">
-              <option value="vi">Vietnamese</option>
+          <div class="field">
+            <label for="whisperModel">Whisper model</label>
+            <select id="whisperModel" name="whisper_model">
+              <option value="small" selected>small (cân bằng)</option><option value="medium">medium (chậm, chính xác)</option><option value="base">base (nhanh)</option><option value="tiny">tiny (nhanh nhất)</option>
             </select>
+            <span class="field-help">Lớn hơn thường chính xác hơn</span>
           </div>
         </div>
 
-        <label for="whisperModel">Whisper model</label>
-        <select id="whisperModel" name="whisper_model">
-          <option value="small">small</option>
-          <option value="medium">medium</option>
-          <option value="base">base</option>
-          <option value="tiny">tiny</option>
-        </select>
-
-        <label>Output</label>
-        <div class="mode">
-          <span>Soft subtitles</span>
-          <input type="radio" name="export_mode" value="soft" checked>
+        <div class="field">
+          <label for="translationProvider">Translation provider</label>
+          <select id="translationProvider" name="translation_provider">
+            <option value="google" selected>Google Translate (free)</option>
+            <option value="ollama">Ollama local</option>
+            <option value="cerebras">Cerebras API</option>
+          </select>
+          <span class="field-help" id="translationProviderHelp">Google Translate free, không cần API key</span>
         </div>
 
-        <label class="mode" style="margin-top:10px;">
-          <span>Translate to Vietnamese</span>
-          <input id="translateToggle" type="checkbox" checked>
+        <input type="hidden" id="targetLang" name="target_lang" value="vi">
+        <label class="output-card">
+          <input type="radio" name="export_mode" value="burn" checked>
+          <span><strong>Burn phụ đề Việt vào video</strong><small>Phụ đề luôn hiện, không cần bật subtitle trong player.</small></span>
         </label>
 
-        <label class="mode" style="margin-top:10px;">
-          <span>Vietnamese voice only</span>
-          <input id="dubToggle" type="checkbox" checked>
-        </label>
+        <div class="switches">
+          <label class="switch"><span>Dịch sang tiếng Việt</span><input id="translateToggle" type="checkbox" checked></label>
+          <label class="switch"><span>Thay audio bằng giọng Việt</span><input id="dubToggle" type="checkbox" checked></label>
+        </div>
 
-        <label for="ttsVoice">Vietnamese voice</label>
-        <select id="ttsVoice" name="tts_voice">
-          <option value="F1">F1</option>
-          <option value="F2">F2</option>
-          <option value="F3">F3</option>
-          <option value="F4">F4</option>
-          <option value="F5">F5</option>
-          <option value="M1">M1</option>
-          <option value="M2">M2</option>
-          <option value="M3">M3</option>
-          <option value="M4">M4</option>
-          <option value="M5">M5</option>
-        </select>
+        <div class="field">
+          <label for="ttsVoice">Giọng Supertonic</label>
+          <select id="ttsVoice" name="tts_voice">
+            <option value="F1">F1</option><option value="F2">F2</option><option value="F3">F3</option><option value="F4">F4</option><option value="F5">F5</option>
+            <option value="M1">M1</option><option value="M2">M2</option><option value="M3">M3</option><option value="M4">M4</option><option value="M5">M5</option>
+          </select>
+          <span class="field-help">TTS được căn theo timestamp của SRT</span>
+        </div>
 
-        <button id="startBtn" type="submit">Start</button>
+        <button class="btn" id="startBtn" type="submit"><span id="startLabel">Chạy pipeline</span></button>
+        <p class="config-note" id="configNote">Đang đọc cấu hình server…</p>
       </form>
-
-      <div class="details">
-        Set <code>CEREBRAS_API_KEY</code> before starting the server to enable translation.
-      </div>
     </section>
 
-    <section class="panel preview">
-      <h2>Preview</h2>
-      <video id="videoPreview" controls></video>
-
-      <div class="progress-wrap">
-        <div class="progress-bar" id="progressBar"></div>
+    <section class="preview-panel" aria-labelledby="previewTitle">
+      <header class="panel-head"><h2 id="previewTitle">Preview & artifacts</h2><span class="panel-code">JOB <span id="jobId">—</span></span></header>
+      <div class="screen">
+        <video id="videoPreview" controls preload="metadata"></video>
+        <p class="empty-copy" id="previewHint">Video đầu vào xuất hiện ở đây; khi hoàn tất, preview tự chuyển sang bản burn-in.</p>
       </div>
-      <div class="jobline" id="jobLine">No job running.</div>
-      <div class="error" id="errorBox"></div>
-      <div class="downloads" id="downloads"></div>
+
+      <div class="pipeline" aria-label="Pipeline progress">
+        <ol id="pipelineSteps">
+          <li data-threshold="5"><span class="step-num">01</span><span>Đọc video</span><span class="step-state">WAIT</span></li>
+          <li data-threshold="15"><span class="step-num">02</span><span>Tách audio</span><span class="step-state">WAIT</span></li>
+          <li data-threshold="35"><span class="step-num">03</span><span>Transcribe</span><span class="step-state">WAIT</span></li>
+          <li data-threshold="65"><span class="step-num">04</span><span>Dịch VI</span><span class="step-state">WAIT</span></li>
+          <li data-threshold="85"><span class="step-num">05</span><span>Ghép soft sub</span><span class="step-state">WAIT</span></li>
+          <li data-threshold="90"><span class="step-num">06</span><span>Tạo voice</span><span class="step-state">WAIT</span></li>
+          <li data-threshold="96"><span class="step-num">07</span><span>Burn subtitle</span><span class="step-state">WAIT</span></li>
+          <li data-threshold="100"><span class="step-num">08</span><span>Hoàn tất</span><span class="step-state">WAIT</span></li>
+        </ol>
+        <div class="progress-track" role="progressbar" aria-label="Job progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div class="progress-bar" id="progressBar"></div></div>
+        <p class="jobline" id="jobLine" aria-live="polite">Chưa có job.</p>
+        <div class="error" id="errorBox" role="alert"></div>
+      </div>
+      <div class="outputs" id="downloads"></div>
     </section>
   </div>
 </main>
 
+<footer class="foot-stmt">
+  <p class="foot-stmt__line">Soft ở giao diện. Chính xác ở timeline.</p>
+  <div class="foot-stmt__meta"><span>SUPERTONIC · WHISPER · FFMPEG</span><span>LOCAL WORKBENCH</span></div>
+</footer>
+
 <script>
 const form = document.getElementById('jobForm');
 const fileInput = document.getElementById('videoFile');
+const fileDrop = document.getElementById('fileDrop');
+const fileName = document.getElementById('fileName');
+const fileMeta = document.getElementById('fileMeta');
 const videoPreview = document.getElementById('videoPreview');
+const previewHint = document.getElementById('previewHint');
 const startBtn = document.getElementById('startBtn');
+const startLabel = document.getElementById('startLabel');
 const serverStatus = document.getElementById('serverStatus');
 const progressBar = document.getElementById('progressBar');
+const progressTrack = document.querySelector('.progress-track');
 const jobLine = document.getElementById('jobLine');
+const jobId = document.getElementById('jobId');
 const errorBox = document.getElementById('errorBox');
 const downloads = document.getElementById('downloads');
 const translateToggle = document.getElementById('translateToggle');
 const dubToggle = document.getElementById('dubToggle');
+const configNote = document.getElementById('configNote');
+const translationProvider = document.getElementById('translationProvider');
+const translationProviderHelp = document.getElementById('translationProviderHelp');
+const steps = [...document.querySelectorAll('#pipelineSteps li')];
 
 let pollTimer = null;
 let objectUrl = null;
+let finalPreviewUrl = null;
+let serverConfig = null;
 
 loadConfig();
 
-fileInput.addEventListener('change', () => {
-  if (objectUrl) URL.revokeObjectURL(objectUrl);
-  const file = fileInput.files[0];
+function humanSize(bytes) {
+  const units = ['B', 'KB', 'MB', 'GB'];
+  let value = bytes;
+  let unit = 0;
+  while (value >= 1024 && unit < units.length - 1) { value /= 1024; unit += 1; }
+  return `${value.toFixed(unit ? 1 : 0)} ${units[unit]}`;
+}
+
+function showSelectedFile(file) {
   if (!file) return;
+  if (objectUrl) URL.revokeObjectURL(objectUrl);
   objectUrl = URL.createObjectURL(file);
   videoPreview.src = objectUrl;
+  fileName.textContent = file.name;
+  fileMeta.textContent = `${humanSize(file.size)} · ${file.type || 'video'}`;
+  fileDrop.dataset.state = 'filled';
+  previewHint.textContent = 'Đang preview video đầu vào.';
+}
+
+fileInput.addEventListener('change', () => showSelectedFile(fileInput.files[0]));
+translationProvider.addEventListener('change', updateTranslationProviderUi);
+fileDrop.addEventListener('keydown', (event) => {
+  if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); fileInput.click(); }
+});
+['dragenter', 'dragover'].forEach(type => fileDrop.addEventListener(type, event => { event.preventDefault(); fileDrop.dataset.state = 'filled'; }));
+fileDrop.addEventListener('dragleave', () => { if (!fileInput.files[0]) delete fileDrop.dataset.state; });
+fileDrop.addEventListener('drop', event => {
+  event.preventDefault();
+  const file = event.dataTransfer.files[0];
+  if (!file) return;
+  const transfer = new DataTransfer();
+  transfer.items.add(file);
+  fileInput.files = transfer.files;
+  showSelectedFile(file);
 });
 
-form.addEventListener('submit', async (event) => {
+form.addEventListener('submit', async event => {
   event.preventDefault();
   const file = fileInput.files[0];
-  if (!file) return;
+  if (!file) {
+    fileDrop.dataset.state = 'error';
+    fileMeta.textContent = 'Chưa có video. Chọn một file để tiếp tục.';
+    return;
+  }
 
   if (pollTimer) clearInterval(pollTimer);
   downloads.innerHTML = '';
   errorBox.textContent = '';
-  setProgress(0, 'Uploading video...');
-  startBtn.disabled = true;
+  jobId.textContent = 'UPLOADING';
+  setProgress(0, 'Đang upload video…');
+  setRunning(true);
 
   const data = new FormData(form);
   data.set('translate', translateToggle.checked ? 'true' : 'false');
@@ -309,87 +520,132 @@ form.addEventListener('submit', async (event) => {
     const job = await response.json();
     renderJob(job);
     pollTimer = setInterval(() => pollJob(job.id), 1500);
-  } catch (err) {
-    startBtn.disabled = false;
-    errorBox.textContent = err.message;
-    serverStatus.textContent = 'Error';
+  } catch (error) {
+    finishWithError(error);
   }
 });
 
-async function pollJob(jobId) {
+async function pollJob(id) {
   try {
-    const response = await fetch(`/api/jobs/${jobId}`);
+    const response = await fetch(`/api/jobs/${id}`);
     if (!response.ok) throw new Error(await response.text());
     const job = await response.json();
     renderJob(job);
     if (job.status === 'done' || job.status === 'error') {
       clearInterval(pollTimer);
       pollTimer = null;
-      startBtn.disabled = false;
+      setRunning(false, job.status);
     }
-  } catch (err) {
-    clearInterval(pollTimer);
+  } catch (error) {
+    if (pollTimer) clearInterval(pollTimer);
     pollTimer = null;
-    startBtn.disabled = false;
-    errorBox.textContent = err.message;
-    serverStatus.textContent = 'Error';
+    finishWithError(error);
   }
 }
 
 function renderJob(job) {
-  serverStatus.textContent = job.status;
-  setProgress(job.progress || 0, `${job.step} (${job.progress || 0}%)`);
+  serverStatus.textContent = job.status.toUpperCase();
+  serverStatus.dataset.state = job.status;
+  jobId.textContent = job.id;
+  setProgress(job.progress || 0, `${job.step} · ${job.progress || 0}%`);
   errorBox.textContent = job.error || '';
   downloads.innerHTML = '';
 
   const labels = {
-    output_dubbed_video: 'DOWNLOAD THIS: Vietnamese-only voice video',
-    output_video: 'Subtitled video (original audio)',
-    vi_srt: 'Vietnamese SRT',
-    original_srt: 'Original SRT',
-    audio: 'Extracted audio',
-    input: 'Input video'
+    output_burned_video: 'MP4 cuối · giọng Việt + burn subtitle',
+    output_dubbed_video: 'MP4 giọng Việt · soft subtitle',
+    output_video: 'MP4 audio gốc · soft subtitle',
+    vi_srt: 'Vietnamese SRT', original_srt: 'Original SRT', audio: 'Extracted WAV', input: 'Input video'
   };
-  const order = [
-    'output_dubbed_video',
-    'output_video',
-    'vi_srt',
-    'original_srt',
-    'audio',
-    'input'
-  ];
-  const downloadEntries = Object.entries(job.downloads || {}).sort(
-    ([a], [b]) => order.indexOf(a) - order.indexOf(b)
-  );
-
-  downloadEntries.forEach(([kind, url]) => {
-    const a = document.createElement('a');
-    a.href = url;
-    a.textContent = labels[kind] || kind;
-    downloads.appendChild(a);
+  const order = ['output_burned_video', 'output_dubbed_video', 'output_video', 'vi_srt', 'original_srt', 'audio', 'input'];
+  const entries = Object.entries(job.downloads || {}).sort(([a], [b]) => order.indexOf(a) - order.indexOf(b));
+  entries.forEach(([kind, url]) => {
+    const link = document.createElement('a');
+    link.className = 'download';
+    link.href = url;
+    link.textContent = labels[kind] || kind;
+    if (kind === 'output_burned_video') link.dataset.primary = 'true';
+    downloads.appendChild(link);
   });
+
+  if (job.status === 'done' && job.downloads?.output_burned_video && finalPreviewUrl !== job.downloads.output_burned_video) {
+    finalPreviewUrl = job.downloads.output_burned_video;
+    videoPreview.src = finalPreviewUrl;
+    previewHint.textContent = 'Preview output cuối: giọng Việt và phụ đề đã burn vào hình.';
+  }
 }
 
 function setProgress(value, text) {
-  progressBar.style.width = `${Math.max(0, Math.min(100, value))}%`;
+  const progress = Math.max(0, Math.min(100, value));
+  progressBar.style.transform = `scaleX(${progress / 100})`;
+  progressTrack.setAttribute('aria-valuenow', String(progress));
   jobLine.textContent = text;
+  steps.forEach((step, index) => {
+    const threshold = Number(step.dataset.threshold);
+    const previous = index ? Number(steps[index - 1].dataset.threshold) : 0;
+    const state = progress >= threshold ? 'done' : progress >= previous && progress > 0 ? 'active' : 'wait';
+    step.dataset.state = state;
+    step.querySelector('.step-state').textContent = state === 'done' ? 'DONE' : state === 'active' ? 'RUN' : 'WAIT';
+  });
+}
+
+function setRunning(running, result = '') {
+  startBtn.disabled = running;
+  startBtn.dataset.state = running ? 'loading' : result || 'default';
+  startLabel.textContent = running ? 'Pipeline đang chạy' : result === 'done' ? 'Chạy job mới' : result === 'error' ? 'Thử lại' : 'Chạy pipeline';
+}
+
+function finishWithError(error) {
+  setRunning(false, 'error');
+  errorBox.textContent = error.message;
+  serverStatus.textContent = 'ERROR';
+  serverStatus.dataset.state = 'error';
 }
 
 async function loadConfig() {
   try {
     const response = await fetch('/api/config');
-    if (!response.ok) return;
-    const config = await response.json();
-    if (!config.has_cerebras_api_key) {
-      translateToggle.checked = false;
-      dubToggle.checked = false;
-      serverStatus.textContent = 'Ready, translation key missing';
-    } else {
-      serverStatus.textContent = `Ready, ${config.cerebras_model}`;
-    }
-  } catch (_err) {
-    serverStatus.textContent = 'Ready';
+    if (!response.ok) throw new Error('Không đọc được config');
+    serverConfig = await response.json();
+    updateTranslationProviderUi();
+  } catch (_error) {
+    configNote.textContent = 'Server config chưa sẵn sàng.';
+    serverStatus.textContent = 'OFFLINE';
+    serverStatus.dataset.state = 'error';
   }
+}
+
+function updateTranslationProviderUi() {
+  if (!serverConfig) return;
+  if (translationProvider.value === 'google') {
+    translationProviderHelp.textContent = 'Google Translate free, không cần API key';
+    configNote.textContent = 'Google Translate online · không cần cài đặt · nhanh, chính xác';
+    serverStatus.textContent = 'GOOGLE TRANSLATE';
+    serverStatus.dataset.state = 'ready';
+    return;
+  }
+  if (translationProvider.value === 'ollama') {
+    const ready = serverConfig.ollama_available && serverConfig.ollama_model_available;
+    translationProviderHelp.textContent = ready
+      ? `Local model sẵn sàng: ${serverConfig.ollama_model}`
+      : `Cần chạy: ollama pull ${serverConfig.ollama_model}`;
+    configNote.textContent = ready
+      ? `Ollama local: ${serverConfig.ollama_model} · không cần API key · output: burned MP4`
+      : `Ollama chưa có model ${serverConfig.ollama_model}. Tải model rồi refresh trang.`;
+    serverStatus.textContent = ready ? 'OLLAMA READY' : 'OLLAMA SETUP';
+    serverStatus.dataset.state = ready ? 'ready' : 'error';
+    return;
+  }
+
+  const ready = serverConfig.has_cerebras_api_key;
+  translationProviderHelp.textContent = ready
+    ? `Server API: ${serverConfig.cerebras_api_key_hint} · ${serverConfig.cerebras_model}`
+    : 'Thiếu CEREBRAS_API_KEY trên server.';
+  configNote.textContent = ready
+    ? `Cerebras: ${serverConfig.cerebras_model} · output: burned MP4`
+    : 'Chưa có CEREBRAS_API_KEY trên server · đặt biến môi trường rồi khởi động lại server.';
+  serverStatus.textContent = ready ? 'CEREBRAS READY' : 'KEY MISSING';
+  serverStatus.dataset.state = ready ? 'ready' : 'error';
 }
 </script>
 </body>

@@ -1,8 +1,11 @@
 from __future__ import annotations
 
 from pathlib import Path
+import math
 import re
 import sys
+
+import soundfile as sf
 
 from .media import MediaToolError, probe_media, require_tool, run_command
 from .subtitle import SubtitleBlock, srt_time_to_seconds
@@ -104,38 +107,94 @@ def _video_duration(video_path: Path) -> float:
         raise DubbingError("Could not determine video duration.") from exc
 
 
-def _mix_delayed_clips(clips: list[tuple[Path, int]], output_path: Path, duration: float) -> None:
+def _mix_delayed_clips(
+    clips: list[tuple[Path, int]],
+    output_path: Path,
+    duration: float,
+    chunk_seconds: float = 300.0,
+) -> None:
+    """Render a long TTS timeline in bounded chunks, then concatenate losslessly."""
     require_tool("ffmpeg")
+    if duration <= 0:
+        raise DubbingError("Video duration must be positive.")
+
+    chunk_seconds = max(30.0, chunk_seconds)
+    chunk_dir = output_path.parent / "dub_chunks"
+    chunk_dir.mkdir(parents=True, exist_ok=True)
+    clip_info = [
+        (path, start_ms / 1000.0, start_ms / 1000.0 + float(sf.info(path).duration))
+        for path, start_ms in clips
+    ]
+    chunk_paths: list[Path] = []
+
+    for chunk_index in range(math.ceil(duration / chunk_seconds)):
+        chunk_start = chunk_index * chunk_seconds
+        chunk_end = min(duration, chunk_start + chunk_seconds)
+        chunk_duration = chunk_end - chunk_start
+        active = [item for item in clip_info if item[1] < chunk_end and item[2] > chunk_start]
+        chunk_path = chunk_dir / f"chunk_{chunk_index:05d}.wav"
+
+        if active:
+            _render_audio_chunk(active, chunk_path, chunk_start, chunk_duration)
+        else:
+            run_command(
+                [
+                    "ffmpeg", "-y", "-f", "lavfi", "-i", "anullsrc=r=44100:cl=stereo",
+                    "-t", f"{chunk_duration:.6f}", "-c:a", "pcm_s16le", str(chunk_path),
+                ]
+            )
+        chunk_paths.append(chunk_path)
+
+    concat_list = chunk_dir / "concat.txt"
+    concat_list.write_text(
+        "".join(f"file '{path.name}'\n" for path in chunk_paths),
+        encoding="utf-8",
+    )
+    run_command(
+        [
+            "ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", str(concat_list),
+            "-c:a", "copy", str(output_path),
+        ]
+    )
+    concat_list.unlink(missing_ok=True)
+    for chunk_path in chunk_paths:
+        chunk_path.unlink(missing_ok=True)
+    chunk_dir.rmdir()
+
+
+def _render_audio_chunk(
+    clips: list[tuple[Path, float, float]],
+    output_path: Path,
+    chunk_start: float,
+    chunk_duration: float,
+) -> None:
     args = ["ffmpeg", "-y"]
-    for clip_path, _start_ms in clips:
+    for clip_path, _start, _end in clips:
         args.extend(["-i", str(clip_path)])
 
-    delayed_labels = []
     filter_parts = []
-    for i, (_clip_path, start_ms) in enumerate(clips):
-        label = f"a{i}"
-        delayed_labels.append(f"[{label}]")
-        filter_parts.append(f"[{i}:a]adelay={start_ms}:all=1[{label}]")
+    labels = []
+    chunk_end = chunk_start + chunk_duration
+    for index, (_path, clip_start, clip_end) in enumerate(clips):
+        trim_start = max(0.0, chunk_start - clip_start)
+        trim_end = min(clip_end, chunk_end) - clip_start
+        delay_ms = max(0, int(round((clip_start - chunk_start) * 1000)))
+        label = f"a{index}"
+        labels.append(f"[{label}]")
+        filter_parts.append(
+            f"[{index}:a]atrim=start={trim_start:.6f}:end={trim_end:.6f},"
+            f"asetpts=PTS-STARTPTS,adelay={delay_ms}:all=1[{label}]"
+        )
 
     filter_parts.append(
-        "".join(delayed_labels)
-        + f"amix=inputs={len(clips)}:duration=longest:dropout_transition=0,"
-        + f"apad,atrim=0:{duration:.3f}[dub]"
+        "".join(labels)
+        + f"amix=inputs={len(clips)}:duration=longest:dropout_transition=0:normalize=0,"
+        + f"apad,atrim=0:{chunk_duration:.6f},alimiter=limit=0.95[dub]"
     )
-
     args.extend(
         [
-            "-filter_complex",
-            ";".join(filter_parts),
-            "-map",
-            "[dub]",
-            "-ar",
-            "44100",
-            "-ac",
-            "2",
-            "-c:a",
-            "pcm_s16le",
-            str(output_path),
+            "-filter_complex", ";".join(filter_parts), "-map", "[dub]",
+            "-ar", "44100", "-ac", "2", "-c:a", "pcm_s16le", str(output_path),
         ]
     )
     run_command(args)

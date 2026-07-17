@@ -17,8 +17,20 @@ def require_tool(name: str) -> str:
     return path
 
 
-def run_command(args: list[str]) -> None:
-    proc = subprocess.run(args, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+def run_command(args: list[str], cwd: Path | None = None, timeout: int | None = None) -> None:
+    try:
+        proc = subprocess.run(
+            args,
+            cwd=str(cwd) if cwd else None,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            timeout=timeout,
+        )
+    except subprocess.TimeoutExpired:
+        raise MediaToolError(
+            f"Command timed out after {timeout}s: {' '.join(args)}"
+        )
     if proc.returncode != 0:
         detail = proc.stderr.strip() or proc.stdout.strip()
         raise MediaToolError(detail or f"Command failed: {' '.join(args)}")
@@ -46,7 +58,7 @@ def probe_media(video_path: Path) -> dict:
     return json.loads(proc.stdout)
 
 
-def extract_audio(video_path: Path, audio_path: Path) -> None:
+def extract_audio(video_path: Path, audio_path: Path, timeout: int = 300) -> None:
     require_tool("ffmpeg")
     audio_path.parent.mkdir(parents=True, exist_ok=True)
     run_command(
@@ -61,11 +73,12 @@ def extract_audio(video_path: Path, audio_path: Path) -> None:
             "-ar",
             "16000",
             str(audio_path),
-        ]
+        ],
+        timeout=timeout,
     )
 
 
-def mux_soft_subtitles(video_path: Path, subtitle_path: Path, output_path: Path) -> None:
+def mux_soft_subtitles(video_path: Path, subtitle_path: Path, output_path: Path, timeout: int = 300) -> None:
     require_tool("ffmpeg")
     output_path.parent.mkdir(parents=True, exist_ok=True)
     run_command(
@@ -94,8 +107,42 @@ def mux_soft_subtitles(video_path: Path, subtitle_path: Path, output_path: Path)
             "mov_text",
             "-metadata:s:s:0",
             "language=vie",
-            "-movflags",
-            "+faststart",
             str(output_path),
-        ]
+        ],
+        timeout=timeout,
+    )
+
+
+def burn_subtitles(video_path: Path, subtitle_path: Path, output_path: Path, timeout: int = 600) -> None:
+    """Render subtitles into the video frames and omit selectable subtitle tracks."""
+    require_tool("ffmpeg")
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    run_command(
+        [
+            "ffmpeg",
+            "-y",
+            "-i",
+            str(video_path.resolve()),
+            "-map",
+            "0:v:0",
+            "-map",
+            "0:a?",
+            "-vf",
+            f"subtitles=filename={subtitle_path.name}",
+            "-c:v",
+            "libx264",
+            "-preset",
+            "medium",
+            "-crf",
+            "20",
+            "-c:a",
+            "aac",
+            "-b:a",
+            "160k",
+            "-ac",
+            "2",
+            str(output_path.resolve()),
+        ],
+        cwd=subtitle_path.parent,
+        timeout=timeout,
     )

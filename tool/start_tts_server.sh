@@ -39,7 +39,7 @@ echo
 ASSETS_DIR="$REPO_DIR/assets"
 ONNX_FILE="$ASSETS_DIR/onnx/duration_predictor.onnx"
 
-if [ ! -f "$ONNX_FILE" ]; then
+if [ ! -f "$ONNX_FILE" ] || grep -q '^version https://git-lfs.github.com/spec/' "$ONNX_FILE"; then
     echo "[assets] Model assets not found. Downloading Supertonic 3 from Hugging Face..."
     echo
 
@@ -57,13 +57,20 @@ if [ ! -f "$ONNX_FILE" ]; then
         fi
     fi
 
-    if [ -e "$ASSETS_DIR" ]; then
-        echo "[assets] Removing placeholder assets directory..."
-        rm -rf "$ASSETS_DIR"
+    if [ -d "$ASSETS_DIR/.git" ]; then
+        git -C "$ASSETS_DIR" lfs pull
+    else
+        if [ -e "$ASSETS_DIR" ]; then
+            echo "[assets] Removing placeholder assets directory..."
+            rm -rf "$ASSETS_DIR"
+        fi
+        if ! git clone https://huggingface.co/Supertone/supertonic-3 "$ASSETS_DIR"; then
+            echo "[error] Failed to clone model assets. Check your internet connection." >&2
+            exit 1
+        fi
     fi
-
-    if ! git clone https://huggingface.co/Supertone/supertonic-3 "$ASSETS_DIR"; then
-        echo "[error] Failed to clone model assets. Check your internet connection." >&2
+    if grep -q '^version https://git-lfs.github.com/spec/' "$ONNX_FILE"; then
+        echo "[error] Model download did not complete. Check the network connection and disk space." >&2
         exit 1
     fi
     echo "[assets] Download complete."

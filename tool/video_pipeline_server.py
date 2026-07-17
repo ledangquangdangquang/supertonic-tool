@@ -8,6 +8,8 @@ Usage:
 Environment:
     CEREBRAS_API_KEY   Required for translation.
     CEREBRAS_MODEL     Optional, defaults to gpt-oss-120b.
+    OLLAMA_MODEL        Optional, defaults to qwen3:4b.
+    OLLAMA_BASE_URL     Optional, defaults to http://127.0.0.1:11434.
 """
 from __future__ import annotations
 
@@ -31,10 +33,10 @@ _JOBS_DIR = _TOOL_DIR / "jobs"
 sys.path.insert(0, str(_TOOL_DIR))
 
 from video_pipeline.dub import create_vietnamese_dub
-from video_pipeline.media import extract_audio, mux_soft_subtitles, probe_media
+from video_pipeline.media import burn_subtitles, extract_audio, mux_soft_subtitles, probe_media
 from video_pipeline.subtitle import parse_srt, write_srt
 from video_pipeline.transcribe import FasterWhisperTranscriber
-from video_pipeline.translate import CerebrasTranslator
+from video_pipeline.translate import CerebrasTranslator, GoogleTranslator, OllamaTranslator
 
 
 app = FastAPI(title="Supertonic Video Localizer")
@@ -88,16 +90,52 @@ def _safe_suffix(filename: str) -> str:
     return suffix if suffix in {".mp4", ".mov", ".mkv", ".webm", ".avi", ".m4v"} else ".mp4"
 
 
+def _mask_secret(value: str | None) -> str | None:
+    """Return a safe status hint without exposing an API key to the browser."""
+    if not value:
+        return None
+    if len(value) <= 8:
+        return "Configured"
+    return f"{value[:4]}…{value[-4:]}"
+
+
+def _ollama_status() -> tuple[bool, bool, str | None]:
+    base_url = os.environ.get("OLLAMA_BASE_URL", "http://127.0.0.1:11434").rstrip("/")
+    model = os.environ.get("OLLAMA_MODEL", "qwen3:4b")
+    try:
+        from urllib import request
+        import json
+
+        with request.urlopen(f"{base_url}/api/tags", timeout=2) as response:
+            payload = json.loads(response.read().decode("utf-8"))
+        available_models = {item.get("name") for item in payload.get("models", [])}
+        return True, model in available_models, None
+    except Exception as exc:
+        return False, False, str(exc)
+
+
 @app.get("/", response_class=HTMLResponse)
 def index():
     return (_TOOL_DIR / "video_localizer_web.html").read_text(encoding="utf-8")
 
 
+@app.get("/tokens.css")
+def design_tokens():
+    return FileResponse(_REPO_DIR / "tokens.css", media_type="text/css")
+
+
 @app.get("/api/config")
 def config():
+    server_api_key = os.environ.get("CEREBRAS_API_KEY")
+    ollama_available, ollama_model_available, ollama_error = _ollama_status()
     return {
-        "has_cerebras_api_key": bool(os.environ.get("CEREBRAS_API_KEY")),
+        "has_cerebras_api_key": bool(server_api_key),
+        "cerebras_api_key_hint": _mask_secret(server_api_key),
         "cerebras_model": os.environ.get("CEREBRAS_MODEL", "gpt-oss-120b"),
+        "ollama_available": ollama_available,
+        "ollama_model_available": ollama_model_available,
+        "ollama_model": os.environ.get("OLLAMA_MODEL", "qwen3:4b"),
+        "ollama_error": ollama_error,
     }
 
 
@@ -110,11 +148,14 @@ async def create_job(
     whisper_model: str = Form("small"),
     export_mode: str = Form("soft"),
     translate: str = Form("true"),
+    translation_provider: str = Form("ollama"),
     dub: str = Form("false"),
     tts_voice: str = Form("F1"),
 ):
-    if export_mode != "soft":
-        raise HTTPException(status_code=400, detail="Only soft subtitle export is implemented.")
+    if export_mode not in {"soft", "burn"}:
+        raise HTTPException(status_code=400, detail="Unsupported subtitle export mode.")
+    if translation_provider not in {"ollama", "cerebras", "google"}:
+        raise HTTPException(status_code=400, detail="Unsupported translation provider.")
 
     job_id = uuid.uuid4().hex[:12]
     job_dir = _JOBS_DIR / job_id
@@ -133,6 +174,7 @@ async def create_job(
             "whisper_model": whisper_model,
             "export_mode": export_mode,
             "translate": translate,
+            "translation_provider": translation_provider,
             "dub": dub,
             "tts_voice": tts_voice,
         },
@@ -178,6 +220,7 @@ def _run_job(job_id: str) -> None:
     vi_srt = job_dir / "vi.srt"
     output_video = job_dir / "output_soft_subtitles.mp4"
     output_dubbed_video = job_dir / "output_vietnamese_only.mp4"
+    output_burned_video = job_dir / "output_vietnamese_burned.mp4"
 
     try:
         _set_job(job_id, status="running", step="Reading video metadata", progress=5)
@@ -200,7 +243,13 @@ def _run_job(job_id: str) -> None:
         subtitle_for_export = original_srt
         if opts.get("translate", "true") == "true":
             _set_job(job_id, step="Translating subtitles to Vietnamese", progress=65)
-            translator = CerebrasTranslator()
+            provider = opts.get("translation_provider", "ollama")
+            if provider == "google":
+                translator = GoogleTranslator()
+            elif provider == "cerebras":
+                translator = CerebrasTranslator()
+            else:
+                translator = OllamaTranslator()
             vi_blocks = translator.translate_blocks(
                 original_blocks,
                 source_lang=opts["source_lang"],
@@ -228,6 +277,12 @@ def _run_job(job_id: str) -> None:
                 voice_volume=3.0,
             )
             _add_file(job_id, "output_dubbed_video", output_dubbed_video)
+
+        if opts.get("export_mode") == "burn":
+            _set_job(job_id, step="Burning Vietnamese subtitles into video", progress=96)
+            burn_source = output_dubbed_video if opts.get("dub", "false") == "true" else input_path
+            burn_subtitles(burn_source, subtitle_for_export, output_burned_video)
+            _add_file(job_id, "output_burned_video", output_burned_video)
 
         _set_job(job_id, status="done", step="Done", progress=100)
     except Exception as exc:

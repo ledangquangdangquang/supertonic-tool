@@ -26,8 +26,15 @@ set "SCRIPT_DIR=%~dp0"
 set "REPO_DIR=%SCRIPT_DIR%.."
 set "PY_DIR=%REPO_DIR%\py"
 
-:: --- Auto-download model assets if missing ---
-if not exist "%REPO_DIR%\assets\onnx\duration_predictor.onnx" (
+:: --- Auto-download model assets if missing or still Git LFS pointers ---
+set "ONNX_FILE=%REPO_DIR%\assets\onnx\duration_predictor.onnx"
+set "NEED_ASSETS=0"
+if not exist "%ONNX_FILE%" set "NEED_ASSETS=1"
+if exist "%ONNX_FILE%" (
+    findstr /b /c:"version https://git-lfs.github.com/spec/" "%ONNX_FILE%" >nul 2>nul
+    if not errorlevel 1 set "NEED_ASSETS=1"
+)
+if "!NEED_ASSETS!"=="1" (
     echo [assets] Model assets not found. Downloading Supertonic 3 from Hugging Face...
     echo.
 
@@ -50,12 +57,15 @@ if not exist "%REPO_DIR%\assets\onnx\duration_predictor.onnx" (
         )
     )
 
-    if exist "%REPO_DIR%\assets" (
-        echo [assets] Removing placeholder assets directory...
-        rmdir /s /q "%REPO_DIR%\assets"
+    if exist "%REPO_DIR%\assets\.git" (
+        git -C "%REPO_DIR%\assets" lfs pull
+    ) else (
+        if exist "%REPO_DIR%\assets" (
+            echo [assets] Removing placeholder assets directory...
+            rmdir /s /q "%REPO_DIR%\assets"
+        )
+        git clone https://huggingface.co/Supertone/supertonic-3 "%REPO_DIR%\assets"
     )
-
-    git clone https://huggingface.co/Supertone/supertonic-3 "%REPO_DIR%\assets"
     if errorlevel 1 (
         echo [error] Failed to clone model assets. Check your internet connection.
         pause
