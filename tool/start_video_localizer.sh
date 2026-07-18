@@ -16,7 +16,7 @@ echo "  URL:      http://127.0.0.1:$PORT"
 echo "  Output:   Soft subtitles"
 echo "  Target:   Vietnamese"
 echo
-echo "  Translation: local Ollama (qwen3:4b) or Cerebras API."
+echo "  Translation: local Ollama (gemma3:4b) or Cerebras API."
 echo
 echo "============================================"
 echo

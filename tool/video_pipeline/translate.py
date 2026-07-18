@@ -221,11 +221,18 @@ def _lang_name(code: str) -> str:
     return _LANG_NAMES.get(code, code)
 
 
+_OLLAMA_SYSTEM_PROMPT = (
+    "You are a professional subtitle translator. "
+    "Keep each line short and concise for subtitle timing. "
+    "Output only the numbered translations, one per line. No other text."
+)
+
+
 class OllamaTranslator:
     """Local subtitle translator backed by Ollama's chat API."""
 
     def __init__(self, model: str | None = None, base_url: str | None = None):
-        self.model = model or os.environ.get("OLLAMA_MODEL", "kaelri/hy-mt2:1.8b")
+        self.model = model or os.environ.get("OLLAMA_MODEL", "gemma3:4b")
         self.base_url = (base_url or os.environ.get("OLLAMA_BASE_URL", "http://127.0.0.1:11434")).rstrip("/")
         self.batch_size = int(os.environ.get("OLLAMA_TRANSLATE_BATCH_SIZE", "20"))
 
@@ -242,24 +249,19 @@ class OllamaTranslator:
         src_name = _lang_name(source_lang)
         tgt_name = _lang_name(target_lang)
         if len(texts) == 1:
-            prompt = (
-                f"Translate the following segment from {src_name} into {tgt_name}, "
-                "without additional explanation.\n\n"
-                f"{texts[0]}"
-            )
+            prompt = f"Translate from {src_name} to {tgt_name}. Keep it short.\n\n{texts[0]}"
         else:
             numbered = "\n".join(f"{i+1}. {t}" for i, t in enumerate(texts))
-            prompt = (
-                f"Translate the following {len(texts)} segments from {src_name} to {tgt_name}. "
-                "Output one translated segment per line, in order, with no extra text.\n\n"
-                f"{numbered}"
-            )
+            prompt = f"Translate from {src_name} to {tgt_name}. Short.\n\n{numbered}"
 
         payload = {
             "model": self.model,
             "stream": False,
             "options": {"temperature": 0.1, "num_ctx": 4096},
-            "messages": [{"role": "user", "content": prompt}],
+            "messages": [
+                {"role": "system", "content": _OLLAMA_SYSTEM_PROMPT},
+                {"role": "user", "content": prompt},
+            ],
         }
         req = request.Request(
             f"{self.base_url}/api/chat",

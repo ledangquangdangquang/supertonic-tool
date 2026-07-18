@@ -8,7 +8,7 @@ Usage:
 Environment:
     CEREBRAS_API_KEY   Required for translation.
     CEREBRAS_MODEL     Optional, defaults to gpt-oss-120b.
-    OLLAMA_MODEL        Optional, defaults to kaelri/hy-mt2:1.8b.
+    OLLAMA_MODEL        Optional, defaults to gemma3:4b.
     OLLAMA_BASE_URL     Optional, defaults to http://127.0.0.1:11434.
 """
 from __future__ import annotations
@@ -101,7 +101,7 @@ def _mask_secret(value: str | None) -> str | None:
 
 def _ollama_status() -> tuple[bool, bool, str | None]:
     base_url = os.environ.get("OLLAMA_BASE_URL", "http://127.0.0.1:11434").rstrip("/")
-    model = os.environ.get("OLLAMA_MODEL", "kaelri/hy-mt2:1.8b")
+    model = os.environ.get("OLLAMA_MODEL", "gemma3:4b")
     try:
         from urllib import request
         import json
@@ -134,7 +134,7 @@ def config():
         "cerebras_model": os.environ.get("CEREBRAS_MODEL", "gpt-oss-120b"),
         "ollama_available": ollama_available,
         "ollama_model_available": ollama_model_available,
-        "ollama_model": os.environ.get("OLLAMA_MODEL", "kaelri/hy-mt2:1.8b"),
+        "ollama_model": os.environ.get("OLLAMA_MODEL", "gemma3:4b"),
         "ollama_error": ollama_error,
     }
 

@@ -135,7 +135,7 @@ video -> audio.wav -> original.srt -> vi.srt -> Vietnamese TTS -> MP4 with burne
 Prerequisites:
 - `ffmpeg` and `ffprobe` on PATH.
 - Python dependencies installed through `uv sync` or the provided launcher.
-- For local Vietnamese translation: Ollama with `qwen3:4b` (`ollama pull qwen3:4b`).
+- For local Vietnamese translation: Ollama with `gemma3:4b` (`ollama pull gemma3:4b`).
 - Optional Cerebras fallback: `CEREBRAS_API_KEY`. The local web UI shows a masked status hint when a server key is configured.
 
 Ubuntu/macOS:

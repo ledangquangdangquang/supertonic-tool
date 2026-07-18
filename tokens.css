@@ -1,0 +1,58 @@
+:root {
+  --color-paper: oklch(97% 0.012 95);
+  --color-paper-2: oklch(94% 0.016 95);
+  --color-paper-3: oklch(91% 0.02 95);
+  --color-ink: oklch(20% 0.012 250);
+  --color-ink-2: oklch(31% 0.018 250);
+  --color-muted: oklch(43% 0.018 250);
+  --color-rule: oklch(77% 0.025 95);
+  --color-rule-2: oklch(59% 0.035 250);
+  --color-accent: oklch(86% 0.18 95);
+  --color-accent-deep: oklch(65% 0.16 95);
+  --color-accent-ink: oklch(20% 0.012 250);
+  --color-accent-2: oklch(66% 0.18 235);
+  --color-accent-2-soft: oklch(91% 0.055 235);
+  --color-accent-3: oklch(68% 0.24 18);
+  --color-accent-3-soft: oklch(93% 0.045 18);
+  --color-success: oklch(52% 0.15 150);
+  --color-success-soft: oklch(92% 0.045 150);
+  --color-error: oklch(49% 0.19 25);
+  --color-error-soft: oklch(94% 0.035 25);
+  --color-focus: oklch(42% 0.17 262);
+  --color-video: oklch(12% 0.01 250);
+
+  --font-display: "Plus Jakarta Sans", Geist, system-ui, sans-serif;
+  --font-body: "Plus Jakarta Sans", Geist, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+
+  --space-2xs: 0.25rem;
+  --space-xs: 0.5rem;
+  --space-sm: 0.75rem;
+  --space-md: 1rem;
+  --space-lg: 1.5rem;
+  --space-xl: 2rem;
+  --space-2xl: 3rem;
+  --space-3xl: 4rem;
+
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.375rem;
+  --text-2xl: clamp(1.75rem, 4vw, 2.75rem);
+
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in: cubic-bezier(0.7, 0, 0.84, 0);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --dur-fast: 100ms;
+  --dur-short: 180ms;
+  --dur-medium: 300ms;
+
+  --rule-hair: 1px;
+  --rule-strong: 2px;
+  --radius-input: 0.75rem;
+  --radius-card: 1.25rem;
+  --radius-pill: 999px;
+  --page-max: 92rem;
+  --page-gutter: clamp(1rem, 3vw, 2.5rem);
+}

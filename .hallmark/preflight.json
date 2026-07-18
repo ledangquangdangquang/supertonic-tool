@@ -1,0 +1,9 @@
+{
+  "date": "2026-07-17",
+  "framework": "vanilla HTML/CSS/JavaScript",
+  "font_stack": "system sans-serif",
+  "palette": "existing dark hard-coded palette",
+  "motion": "motion-cut, no library",
+  "spacing": "no token scale",
+  "source": "tool/video_localizer_web.html"
+}
