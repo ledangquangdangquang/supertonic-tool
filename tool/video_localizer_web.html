@@ -344,12 +344,12 @@ select:disabled { opacity: 0.55; cursor: not-allowed; }
         <div class="field-grid">
           <div class="field">
             <label for="sourceLang">Ngôn ngữ nguồn</label>
-            <select id="sourceLang" name="source_lang">
-              <option value="auto">Tự nhận diện</option><option value="en">English</option><option value="vi">Vietnamese</option>
+            <select id="sourceLang" name="source_lang" required>
+              <option value="en" selected>English</option><option value="vi">Vietnamese</option>
               <option value="ja">Japanese</option><option value="ko">Korean</option><option value="zh">Chinese</option>
               <option value="fr">French</option><option value="de">German</option><option value="es">Spanish</option>
             </select>
-            <span class="field-help">Whisper language hint</span>
+            <span class="field-help">Chọn ngôn ngữ nguồn của video</span>
           </div>
           <div class="field">
             <label for="whisperModel">Whisper model</label>

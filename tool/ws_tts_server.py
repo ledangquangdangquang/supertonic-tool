@@ -218,17 +218,17 @@ class TTSEngine:
         import numpy as np
         from helper import Style
 
-        # Group by voice (batch requires same style)
-        indexed = sorted(enumerate(items), key=lambda x: x[1][2])
+        # Group by voice + speed (batch requires same style and speed)
+        indexed = sorted(enumerate(items), key=lambda x: (x[1][2], x[1][3]))
         results = [None] * len(items)
         t0 = time.perf_counter()
 
         from itertools import groupby
-        for voice_key, group in groupby(indexed, key=lambda x: x[1][2]):
+        for (voice_key, speed), group in groupby(indexed, key=lambda x: (x[1][2], x[1][3])):
             group = list(group)
             style = self.voices.get(voice_key.upper(), self.voices.get("M1"))
             texts, langs = [], []
-            for idx, (text, lang, voice, speed) in group:
+            for idx, (text, lang, voice, _speed) in group:
                 lang = lang.split("-")[0]
                 texts.append(text if lang in self.languages else text)
                 langs.append(lang if lang in self.languages else "en")

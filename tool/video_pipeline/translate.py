@@ -25,7 +25,10 @@ def _translate_blocks(
         texts = [block.text for block in batch]
         translated_texts = translator._translate_texts(texts, source_lang, target_lang)
         if len(translated_texts) != len(batch):
-            raise TranslationError("Translator returned a different number of subtitles.")
+            translated_texts = []
+            for text in texts:
+                result = translator._translate_texts([text], source_lang, target_lang)
+                translated_texts.append(result[0] if result else text)
         translated.extend(
             SubtitleBlock(
                 index=block.index,
@@ -60,7 +63,7 @@ class CerebrasTranslator:
     def translate_blocks(
         self,
         blocks: list[SubtitleBlock],
-        source_lang: str = "auto",
+        source_lang: str,
         target_lang: str = "vi",
         batch_size: int | None = None,
     ) -> list[SubtitleBlock]:
@@ -175,7 +178,7 @@ class GoogleTranslator:
     def translate_blocks(
         self,
         blocks: list[SubtitleBlock],
-        source_lang: str = "auto",
+        source_lang: str,
         target_lang: str = "vi",
         batch_size: int | None = None,
     ) -> list[SubtitleBlock]:
@@ -189,8 +192,7 @@ class GoogleTranslator:
                 "Missing deep-translator. Install it with: uv add deep-translator"
             )
 
-        src = source_lang if source_lang != "auto" else "auto"
-        gt = _GT(source=src, target=target_lang)
+        gt = _GT(source=source_lang, target=target_lang)
         try:
             result = gt.translate_batch(texts)
         except Exception as exc:
@@ -198,42 +200,66 @@ class GoogleTranslator:
         return [t or "" for t in result]
 
 
+_LANG_NAMES: dict[str, str] = {
+    "en": "English",
+    "vi": "Vietnamese",
+    "ja": "Japanese",
+    "ko": "Korean",
+    "zh": "Chinese",
+    "fr": "French",
+    "de": "German",
+    "es": "Spanish",
+    "pt": "Portuguese",
+    "ru": "Russian",
+    "ar": "Arabic",
+    "th": "Thai",
+    "id": "Indonesian",
+}
+
+
+def _lang_name(code: str) -> str:
+    return _LANG_NAMES.get(code, code)
+
+
 class OllamaTranslator:
-    """Local subtitle translator backed by Ollama's JSON chat API."""
+    """Local subtitle translator backed by Ollama's chat API."""
 
     def __init__(self, model: str | None = None, base_url: str | None = None):
-        self.model = model or os.environ.get("OLLAMA_MODEL", "gemma3:4b")
+        self.model = model or os.environ.get("OLLAMA_MODEL", "kaelri/hy-mt2:1.8b")
         self.base_url = (base_url or os.environ.get("OLLAMA_BASE_URL", "http://127.0.0.1:11434")).rstrip("/")
         self.batch_size = int(os.environ.get("OLLAMA_TRANSLATE_BATCH_SIZE", "20"))
 
     def translate_blocks(
         self,
         blocks: list[SubtitleBlock],
-        source_lang: str = "auto",
+        source_lang: str,
         target_lang: str = "vi",
         batch_size: int | None = None,
     ) -> list[SubtitleBlock]:
         return _translate_blocks(self, blocks, source_lang, target_lang, batch_size or self.batch_size)
 
     def _translate_texts(self, texts: list[str], source_lang: str, target_lang: str) -> list[str]:
+        src_name = _lang_name(source_lang)
+        tgt_name = _lang_name(target_lang)
+        if len(texts) == 1:
+            prompt = (
+                f"Translate the following segment from {src_name} into {tgt_name}, "
+                "without additional explanation.\n\n"
+                f"{texts[0]}"
+            )
+        else:
+            numbered = "\n".join(f"{i+1}. {t}" for i, t in enumerate(texts))
+            prompt = (
+                f"Translate the following {len(texts)} segments from {src_name} to {tgt_name}. "
+                "Output one translated segment per line, in order, with no extra text.\n\n"
+                f"{numbered}"
+            )
+
         payload = {
             "model": self.model,
             "stream": False,
             "options": {"temperature": 0.1, "num_ctx": 4096},
-            "messages": [
-                {
-                    "role": "system",
-                    "content": (
-                        "You translate subtitles. Return ONLY a JSON array of translated strings. "
-                        "No thinking, no explanation, no markdown."
-                    ),
-                },
-                {
-                    "role": "user",
-                    "content": f"Translate from {source_lang} to {target_lang}. Return ONLY a JSON array.\n"
-                    + "\n---\n".join(f"{i+1}. {t}" for i, t in enumerate(texts)),
-                },
-            ],
+            "messages": [{"role": "user", "content": prompt}],
         }
         req = request.Request(
             f"{self.base_url}/api/chat",
@@ -241,16 +267,49 @@ class OllamaTranslator:
             headers={"Content-Type": "application/json", "Accept": "application/json"},
             method="POST",
         )
-        return self._send_with_retry(req)
+        return self._send_with_retry(req, expected=len(texts))
 
-    def _send_with_retry(self, req: request.Request) -> list[str]:
+    @staticmethod
+    def _parse_lines(content: str, expected: int) -> list[str]:
+        import re
+        numbered_re = re.compile(r"^\d+[\.\)]\s+")
+        lines = [l.strip() for l in content.split("\n") if l.strip()]
+
+        parsed = []
+        for line in lines:
+            m = numbered_re.match(line)
+            if m:
+                t = line[m.end():].strip()
+                if t:
+                    parsed.append(t)
+
+        if len(parsed) >= expected:
+            return parsed[:expected]
+
+        parsed.clear()
+        for line in lines:
+            cleaned = numbered_re.sub("", line).strip()
+            if cleaned:
+                parsed.append(cleaned)
+
+        if len(parsed) > expected:
+            # Preamble lines at the start; take the last `expected` lines
+            parsed = parsed[-expected:]
+        elif len(parsed) < expected:
+            parsed += [""] * (expected - len(parsed))
+        return parsed[:expected]
+
+    def _send_with_retry(self, req: request.Request, expected: int = 1) -> list[str]:
         last_detail = ""
         for attempt in range(4):
             try:
                 with request.urlopen(req, timeout=300) as response:
                     data = json.loads(response.read().decode("utf-8"))
                 content = data["message"]["content"].strip()
-                return CerebrasTranslator._parse_json_array(content)
+                try:
+                    return CerebrasTranslator._parse_json_array(content)
+                except TranslationError:
+                    return self._parse_lines(content, expected)
             except error.HTTPError as exc:
                 detail = exc.read().decode("utf-8", errors="replace")
                 last_detail = f"Ollama API error {exc.code}: {detail}"

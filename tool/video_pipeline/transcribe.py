@@ -21,7 +21,7 @@ class FasterWhisperTranscriber:
         audio_path: Path,
         srt_path: Path,
         source_lang: str = "auto",
-    ) -> list[SubtitleBlock]:
+    ) -> tuple[list[SubtitleBlock], str]:
         try:
             from faster_whisper import WhisperModel
         except ImportError as exc:
@@ -33,25 +33,25 @@ class FasterWhisperTranscriber:
         if source_lang and source_lang != "auto":
             kwargs["language"] = source_lang
 
-        blocks = self._run_transcription(WhisperModel, audio_path, kwargs)
+        blocks, detected_lang = self._run_transcription(WhisperModel, audio_path, kwargs)
 
         srt_path.write_text(write_srt(blocks), encoding="utf-8")
-        return blocks
+        return blocks, detected_lang
 
-    def _run_transcription(self, whisper_model, audio_path: Path, kwargs: dict) -> list[SubtitleBlock]:
+    def _run_transcription(self, whisper_model, audio_path: Path, kwargs: dict) -> tuple[list[SubtitleBlock], str]:
         try:
             model = whisper_model(
                 self.model_name,
                 device=self.device,
                 compute_type=self.compute_type,
             )
-            segments, _info = model.transcribe(
+            segments, info = model.transcribe(
                 str(audio_path),
                 vad_filter=True,
                 beam_size=5,
                 **kwargs,
             )
-            return [
+            blocks = [
                 SubtitleBlock(
                     index=i,
                     start=seconds_to_srt_time(segment.start),
@@ -61,6 +61,7 @@ class FasterWhisperTranscriber:
                 for i, segment in enumerate(segments, 1)
                 if segment.text.strip()
             ]
+            return blocks, info.language
         except Exception as exc:
             if self.device != "cpu" and _looks_like_accelerator_error(str(exc)):
                 self.device = "cpu"
