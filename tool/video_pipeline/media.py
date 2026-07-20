@@ -113,7 +113,7 @@ def mux_soft_subtitles(video_path: Path, subtitle_path: Path, output_path: Path,
     )
 
 
-def burn_subtitles(video_path: Path, subtitle_path: Path, output_path: Path, timeout: int = 600) -> None:
+def burn_subtitles(video_path: Path, subtitle_path: Path, output_path: Path, timeout: int = 3600) -> None:
     """Render subtitles into the video frames and omit selectable subtitle tracks."""
     require_tool("ffmpeg")
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -132,7 +132,7 @@ def burn_subtitles(video_path: Path, subtitle_path: Path, output_path: Path, tim
             "-c:v",
             "libx264",
             "-preset",
-            "medium",
+            "veryfast",
             "-crf",
             "20",
             "-c:a",

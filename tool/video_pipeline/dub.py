@@ -4,6 +4,7 @@ from pathlib import Path
 import math
 import re
 import sys
+import subprocess
 
 import soundfile as sf
 
@@ -13,6 +14,66 @@ from .subtitle import SubtitleBlock, srt_time_to_seconds
 
 class DubbingError(RuntimeError):
     pass
+
+
+# ── Constants (inspired by viet-dubbing) ─────────────────────────
+SLOW_RATIO_THRESHOLD = 2.0
+SLOW_SPEED_BOOST = 1.25
+STRETCH_TOLERANCE = 0.05
+COMPRESS_MIN_RATIO = 0.6
+STRETCH_LIMIT = 2.0
+SAMPLE_RATE = 44100
+
+
+def _build_atempo_filter(ratio: float) -> str:
+    """
+    Build chained atempo filter string.
+    FFmpeg atempo only supports 0.5-2.0, so chain for ratios outside range.
+    """
+    ratio = max(0.25, min(ratio, 4.0))
+    filters = []
+    remaining = ratio
+    while remaining > 2.0:
+        filters.append("atempo=2.0")
+        remaining /= 2.0
+    while remaining < 0.5:
+        filters.append("atempo=0.5")
+        remaining /= 0.5
+    filters.append(f"atempo={remaining:.4f}")
+    return ",".join(filters)
+
+
+def _stretch_one_clip(clip_path: Path, target_ms: int, index: int) -> Path | None:
+    """Stretch/compress a WAV clip to exactly fit target_ms using FFmpeg atempo."""
+    clip_ms = sf.info(str(clip_path)).duration * 1000
+    if clip_ms <= 0 or target_ms <= 0:
+        return None
+
+    ratio = clip_ms / target_ms
+    if ratio <= 1.0:
+        return None
+
+    atempo = _build_atempo_filter(ratio)
+    out_path = clip_path.with_name(f"{clip_path.stem}_stretched.wav")
+    cmd = [
+        "ffmpeg", "-y", "-i", str(clip_path),
+        "-filter:a", atempo,
+        "-vn", str(out_path), "-loglevel", "error",
+    ]
+    result = subprocess.run(cmd, capture_output=True)
+    if result.returncode == 0 and out_path.exists():
+        return out_path
+    return None
+
+
+def _get_cache_dir(work_dir: Path) -> Path:
+    cache_dir = work_dir / "tts_cache"
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    return cache_dir
+
+
+def _marker_path(clip_path: Path) -> Path:
+    return clip_path.with_name(clip_path.name + ".fast")
 
 
 def create_vietnamese_dub(
@@ -26,37 +87,102 @@ def create_vietnamese_dub(
     background_volume: float = 0.0,
     voice_volume: float = 1.0,
 ) -> Path:
-    """Generate Vietnamese TTS from subtitle blocks and replace or mix the video's audio."""
+    """Generate Vietnamese TTS from subtitle blocks and replace or mix the video's audio.
+
+    Two-pass approach (inspired by viet-dubbing):
+      Pass 1 — Generate TTS with caching, skipping existing clips.
+      Pass 2 — Detect cues where TTS exceeds 2× slot duration, regen with faster speed.
+      Stretch — Fit each clip to exact subtitle timing via FFmpeg atempo.
+      Mix    — Place all clips into timeline and mux with video.
+    """
     if not blocks:
         raise DubbingError("No subtitle blocks available for dubbing.")
 
     clips_dir = work_dir / "dub_clips"
     clips_dir.mkdir(parents=True, exist_ok=True)
+    cache_dir = _get_cache_dir(work_dir)
     dub_audio = work_dir / "dub_vi.wav"
 
     engine = _load_tts_engine(provider)
-    clip_paths: list[tuple[Path, int]] = []
+    clip_paths: list[tuple[Path, int, float]] = []  # (path, start_ms, slot_duration_sec)
+
+    # ── Pass 1: Generate TTS (with cache) ──────────────────────
     for block in blocks:
         text = _clean_tts_text(block.text)
         if not text:
             continue
 
         start_ms = int(round(srt_time_to_seconds(block.start) * 1000))
-        target_duration = max(0.25, srt_time_to_seconds(block.end) - srt_time_to_seconds(block.start))
-        wav_bytes, duration, _latency = engine.synthesize(text, "vi", voice, speed)
-        if duration > target_duration * 1.08 and speed < 2.0:
-            fitted_speed = min(2.0, speed * (duration / target_duration) * 1.03)
-            wav_bytes, _duration, _latency = engine.synthesize(text, "vi", voice, fitted_speed)
-
+        slot_sec = max(0.25, srt_time_to_seconds(block.end) - srt_time_to_seconds(block.start))
         clip_path = clips_dir / f"{block.index:05d}.wav"
-        clip_path.write_bytes(wav_bytes)
-        clip_paths.append((clip_path, start_ms))
+        cache_key = f"{voice}_{speed}_{block.index:05d}.wav"
+        cached_path = cache_dir / cache_key
+
+        if cached_path.exists() and cached_path.stat().st_size > 0:
+            clip_path.write_bytes(cached_path.read_bytes())
+        else:
+            wav_bytes, duration, _latency = engine.synthesize(text, "vi", voice, speed)
+            clip_path.write_bytes(wav_bytes)
+            cached_path.write_bytes(wav_bytes)
+
+        clip_paths.append((clip_path, start_ms, slot_sec))
 
     if not clip_paths:
         raise DubbingError("No TTS clips were generated.")
 
+    # ── Pass 2: Regen slow cues (> 2× slot duration) ──────────
+    regenerated = 0
+    for clip_path, _start_ms, slot_sec in clip_paths:
+        marker = _marker_path(clip_path)
+        if marker.exists():
+            continue
+
+        clip_dur = sf.info(str(clip_path)).duration
+        if clip_dur <= 0 or slot_sec <= 0:
+            continue
+
+        if (clip_dur / slot_sec) > SLOW_RATIO_THRESHOLD and speed * SLOW_SPEED_BOOST < 2.0:
+            block_index = int(clip_path.stem)
+            block = next((b for b in blocks if b.index == block_index), None)
+            if not block:
+                continue
+            text = _clean_tts_text(block.text)
+            if not text:
+                continue
+
+            fast_speed = min(2.0, speed * SLOW_SPEED_BOOST)
+            wav_bytes, _duration, _latency = engine.synthesize(text, "vi", voice, fast_speed)
+
+            clip_path.write_bytes(wav_bytes)
+            cache_key = f"{voice}_{speed}_{block_index:05d}.wav"
+            (cache_dir / cache_key).write_bytes(wav_bytes)
+            marker.touch()
+            regenerated += 1
+
+    # ── Stretch: fit each clip to exact slot timing ────────────
+    final_clips: list[tuple[Path, int]] = []
+    for clip_path, start_ms, slot_sec in clip_paths:
+        target_ms = int(round(slot_sec * 1000))
+        stretched = _stretch_one_clip(clip_path, target_ms, int(clip_path.stem))
+        if stretched:
+            final_clips.append((stretched, start_ms))
+        else:
+            final_clips.append((clip_path, start_ms))
+
+    if not final_clips:
+        raise DubbingError("No TTS clips were generated.")
+
     duration = _video_duration(video_path)
-    _mix_delayed_clips(clip_paths, dub_audio, duration)
+    _mix_delayed_clips(final_clips, dub_audio, duration)
+
+    # ── Cleanup stretched temp files ───────────────────────────
+    for clip_path, _ in final_clips:
+        if "_stretched" in clip_path.name:
+            try:
+                clip_path.unlink()
+            except OSError:
+                pass
+
     if background_volume > 0:
         _mux_mixed_audio(video_path, dub_audio, output_path, background_volume, voice_volume)
     else:
