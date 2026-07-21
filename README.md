@@ -16,7 +16,7 @@
 - 🎭 **Multi-line dialogue queue** — assign a different voice/language per line for true conversational TTS.
 - 📥 **Bulk import** — load dialogue from `.xlsx`, `.csv`, `.txt`, `.srt`, or markdown tables.
 - 📦 **Batch ZIP download** — convert N lines, get N `.wav` files in one zip.
-- 🎞️ **Video localization MVP** — upload video, transcribe to SRT, translate locally with Ollama or through Cerebras, optionally replace audio with Vietnamese TTS voice-over, and burn Vietnamese subtitles into the final MP4.
+- 🎞️ **Video localization MVP** — upload video, transcribe to SRT, translate locally with Ollama (`hf.co/tencent/Hy-MT2-7B-GGUF:Q4_K_M`) or through Cerebras, optionally replace audio with Vietnamese TTS voice-over, and burn Vietnamese subtitles into the final MP4.
 - 🔌 **Open WebSocket API** — drop-in client examples for Browser, Chrome MV3 extension, Node.js, Python.
 - 🔄 **Upstream sync helper** — `sync_upstream.bat` keeps the fork in lock-step with `supertone-inc/supertonic`.
 
@@ -135,7 +135,7 @@ video -> audio.wav -> original.srt -> vi.srt -> Vietnamese TTS -> MP4 with burne
 Prerequisites:
 - `ffmpeg` and `ffprobe` on PATH.
 - Python dependencies installed through `uv sync` or the provided launcher.
-- For local Vietnamese translation: Ollama with `gemma3:4b` (`ollama pull gemma3:4b`).
+- For local Vietnamese translation: Ollama with `hf.co/tencent/Hy-MT2-7B-GGUF:Q4_K_M` (`ollama pull hf.co/tencent/Hy-MT2-7B-GGUF:Q4_K_M`).
 - Optional Cerebras fallback: `CEREBRAS_API_KEY`. The local web UI shows a masked status hint when a server key is configured.
 
 Ubuntu/macOS:

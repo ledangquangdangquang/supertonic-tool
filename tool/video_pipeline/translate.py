@@ -232,7 +232,7 @@ class OllamaTranslator:
     """Local subtitle translator backed by Ollama's chat API."""
 
     def __init__(self, model: str | None = None, base_url: str | None = None):
-        self.model = model or os.environ.get("OLLAMA_MODEL", "gemma3:4b")
+        self.model = model or os.environ.get("OLLAMA_MODEL", "hf.co/tencent/Hy-MT2-7B-GGUF:Q4_K_M")
         self.base_url = (base_url or os.environ.get("OLLAMA_BASE_URL", "http://127.0.0.1:11434")).rstrip("/")
         self.batch_size = int(os.environ.get("OLLAMA_TRANSLATE_BATCH_SIZE", "20"))
 
