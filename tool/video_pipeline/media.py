@@ -58,9 +58,49 @@ def probe_media(video_path: Path) -> dict:
     return json.loads(proc.stdout)
 
 
+def _has_audio_stream(video_path: Path) -> bool:
+    """Return True if the video contains at least one audio stream."""
+    require_tool("ffprobe")
+    proc = subprocess.run(
+        [
+            "ffprobe",
+            "-v", "error",
+            "-select_streams", "a",
+            "-show_entries", "stream=index",
+            "-of", "json",
+            str(video_path),
+        ],
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+    if proc.returncode != 0:
+        return False
+    try:
+        data = json.loads(proc.stdout)
+        return len(data.get("streams", [])) > 0
+    except Exception:
+        return False
+
+
 def extract_audio(video_path: Path, audio_path: Path, timeout: int = 300) -> None:
     require_tool("ffmpeg")
     audio_path.parent.mkdir(parents=True, exist_ok=True)
+
+    if not _has_audio_stream(video_path):
+        duration = _video_duration(video_path)
+        run_command(
+            [
+                "ffmpeg", "-y",
+                "-f", "lavfi", "-i", f"anullsrc=r=16000:cl=mono",
+                "-t", f"{duration:.6f}",
+                "-c:a", "pcm_s16le",
+                str(audio_path),
+            ],
+            timeout=timeout,
+        )
+        return
+
     run_command(
         [
             "ffmpeg",
@@ -76,6 +116,27 @@ def extract_audio(video_path: Path, audio_path: Path, timeout: int = 300) -> Non
         ],
         timeout=timeout,
     )
+
+
+def _video_duration(video_path: Path) -> float:
+    """Return duration in seconds from ffprobe."""
+    require_tool("ffprobe")
+    proc = subprocess.run(
+        [
+            "ffprobe",
+            "-v", "error",
+            "-show_entries", "format=duration",
+            "-of", "default=noprint_wrappers=1:nokey=1",
+            str(video_path),
+        ],
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+    try:
+        return float(proc.stdout.strip())
+    except (ValueError, TypeError):
+        return 0.0
 
 
 def mux_soft_subtitles(video_path: Path, subtitle_path: Path, output_path: Path, timeout: int = 300) -> None:

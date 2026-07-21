@@ -151,6 +151,8 @@ async def create_job(
     translation_provider: str = Form("ollama"),
     dub: str = Form("false"),
     tts_voice: str = Form("F1"),
+    background_volume: float = Form(0.0),
+    voice_volume: float = Form(1.0),
 ):
     if export_mode not in {"soft", "burn"}:
         raise HTTPException(status_code=400, detail="Unsupported subtitle export mode.")
@@ -177,6 +179,8 @@ async def create_job(
             "translation_provider": translation_provider,
             "dub": dub,
             "tts_voice": tts_voice,
+            "background_volume": str(background_volume),
+            "voice_volume": str(voice_volume),
         },
     )
     with JOBS_LOCK:
@@ -227,6 +231,13 @@ def _run_job(job_id: str) -> None:
         media = probe_media(input_path)
         _set_job(job_id, media=media)
 
+        has_audio = any(
+            s.get("codec_type") == "audio"
+            for s in media.get("streams", [])
+        )
+        if not has_audio:
+            _set_job(job_id, step="Video has no audio track — generating silence for pipeline")
+
         _set_job(job_id, step="Extracting audio", progress=15)
         extract_audio(input_path, audio_path)
         _add_file(job_id, "audio", audio_path)
@@ -239,6 +250,9 @@ def _run_job(job_id: str) -> None:
             source_lang=opts["source_lang"],
         )
         _add_file(job_id, "original_srt", original_srt)
+
+        if not original_blocks:
+            _set_job(job_id, step="No speech detected in audio — SRT will be empty")
 
         subtitle_for_export = original_srt
         if opts.get("translate", "true") == "true":
@@ -266,6 +280,8 @@ def _run_job(job_id: str) -> None:
         if opts.get("dub", "false") == "true":
             _set_job(job_id, step="Generating Vietnamese voice-over", progress=90)
             dub_blocks = parse_srt(subtitle_for_export.read_text(encoding="utf-8"))
+            bg_vol = float(opts.get("background_volume", "0.0"))
+            vc_vol = float(opts.get("voice_volume", "1.0"))
             create_vietnamese_dub(
                 output_video,
                 dub_blocks,
@@ -273,8 +289,8 @@ def _run_job(job_id: str) -> None:
                 output_dubbed_video,
                 voice=opts.get("tts_voice", "F1"),
                 provider=os.environ.get("TTS_PROVIDER", "cpu"),
-                background_volume=0.0,
-                voice_volume=3.0,
+                background_volume=bg_vol,
+                voice_volume=vc_vol,
             )
             _add_file(job_id, "output_dubbed_video", output_dubbed_video)
 

@@ -181,6 +181,36 @@ select:disabled { opacity: 0.55; cursor: not-allowed; }
 }
 .switch input { width: 1.25rem; height: 1.25rem; accent-color: var(--color-success); }
 
+.volume-group {
+  display: grid;
+  gap: var(--space-md);
+  padding: var(--space-md);
+  border: var(--rule-hair) solid var(--color-rule);
+  border-radius: var(--radius-input);
+  background: var(--color-paper);
+}
+.volume-group[hidden] { display: none; }
+.slider-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-sm);
+}
+.slider-row input[type=range] {
+  width: 100%;
+  height: 0.5rem;
+  accent-color: var(--color-accent-3);
+  cursor: pointer;
+}
+.slider-row output {
+  min-width: 3.5rem;
+  text-align: end;
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-ink-2);
+}
+
 .btn {
   --btn-face: var(--color-accent);
   --btn-edge: var(--color-accent-deep);
@@ -378,7 +408,26 @@ select:disabled { opacity: 0.55; cursor: not-allowed; }
 
         <div class="switches">
           <label class="switch"><span>Dịch sang tiếng Việt</span><input id="translateToggle" type="checkbox" checked></label>
-          <label class="switch"><span>Thay audio bằng giọng Việt</span><input id="dubToggle" type="checkbox" checked></label>
+          <label class="switch"><span>Giữ audio gốc nhỏ + lồng tiếng Việt</span><input id="dubToggle" type="checkbox" checked></label>
+        </div>
+
+        <div id="volumeControls" class="volume-group">
+          <div class="field">
+            <label for="bgVolume">Am luong audio goc</label>
+            <div class="slider-row">
+              <input id="bgVolume" name="background_volume" type="range" min="0" max="100" value="15" step="1">
+              <output id="bgVolumeVal" for="bgVolume">15%</output>
+            </div>
+            <span class="field-help">0% = tat hoan toan, 15% = nhe, 100% = nhu goc</span>
+          </div>
+          <div class="field">
+            <label for="voiceVolume">Am luong giong Viet</label>
+            <div class="slider-row">
+              <input id="voiceVolume" name="voice_volume" type="range" min="50" max="300" value="100" step="5">
+              <output id="voiceVolumeVal" for="voiceVolume">100%</output>
+            </div>
+            <span class="field-help">100% = binh thuong, 200% = to hon</span>
+          </div>
         </div>
 
         <div class="field">
@@ -449,6 +498,11 @@ const dubToggle = document.getElementById('dubToggle');
 const configNote = document.getElementById('configNote');
 const translationProvider = document.getElementById('translationProvider');
 const translationProviderHelp = document.getElementById('translationProviderHelp');
+const volumeControls = document.getElementById('volumeControls');
+const bgVolume = document.getElementById('bgVolume');
+const bgVolumeVal = document.getElementById('bgVolumeVal');
+const voiceVolume = document.getElementById('voiceVolume');
+const voiceVolumeVal = document.getElementById('voiceVolumeVal');
 const steps = [...document.querySelectorAll('#pipelineSteps li')];
 
 let pollTimer = null;
@@ -479,6 +533,10 @@ function showSelectedFile(file) {
 
 fileInput.addEventListener('change', () => showSelectedFile(fileInput.files[0]));
 translationProvider.addEventListener('change', updateTranslationProviderUi);
+dubToggle.addEventListener('change', updateVolumeVisibility);
+bgVolume.addEventListener('input', () => { bgVolumeVal.textContent = `${bgVolume.value}%`; });
+voiceVolume.addEventListener('input', () => { voiceVolumeVal.textContent = `${voiceVolume.value}%`; });
+updateVolumeVisibility();
 fileDrop.addEventListener('keydown', (event) => {
   if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); fileInput.click(); }
 });
@@ -493,6 +551,10 @@ fileDrop.addEventListener('drop', event => {
   fileInput.files = transfer.files;
   showSelectedFile(file);
 });
+
+function updateVolumeVisibility() {
+  volumeControls.hidden = !dubToggle.checked;
+}
 
 form.addEventListener('submit', async event => {
   event.preventDefault();
@@ -513,6 +575,8 @@ form.addEventListener('submit', async event => {
   const data = new FormData(form);
   data.set('translate', translateToggle.checked ? 'true' : 'false');
   data.set('dub', dubToggle.checked ? 'true' : 'false');
+  data.set('background_volume', String(Number(bgVolume.value) / 100));
+  data.set('voice_volume', String(Number(voiceVolume.value) / 100));
 
   try {
     const response = await fetch('/api/jobs', { method: 'POST', body: data });

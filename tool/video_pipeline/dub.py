@@ -329,7 +329,7 @@ def _render_audio_chunk(
 def _mux_replace_audio(video_path: Path, audio_path: Path, output_path: Path, voice_volume: float) -> None:
     require_tool("ffmpeg")
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    voice_volume = max(0.1, min(5.0, voice_volume))
+    voice_volume = max(0.1, min(3.0, voice_volume))
     try:
         run_command(
             [
@@ -375,7 +375,7 @@ def _mux_mixed_audio(
     require_tool("ffmpeg")
     output_path.parent.mkdir(parents=True, exist_ok=True)
     background_volume = max(0.0, min(1.0, background_volume))
-    voice_volume = max(0.0, min(2.0, voice_volume))
+    voice_volume = max(0.0, min(3.0, voice_volume))
     try:
         run_command(
             [
