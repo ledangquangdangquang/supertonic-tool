@@ -283,7 +283,8 @@ select:disabled { opacity: 0.55; cursor: not-allowed; }
   color: var(--color-muted);
 }
 .step-num { font-family: var(--font-mono); font-size: var(--text-xs); }
-.step-state { font-family: var(--font-mono); font-size: var(--text-xs); }
+.step-state { font-family: var(--font-mono); font-size: var(--text-xs); white-space: nowrap; }
+.step-state[data-timed] { color: var(--color-success); }
 .pipeline li[data-state="active"] { background: var(--color-accent); color: var(--color-ink); border-color: var(--color-accent-deep); }
 .pipeline li[data-state="done"] { background: var(--color-success-soft); color: var(--color-ink); border-color: var(--color-success); }
 .progress-track { height: 0.75rem; margin-block: var(--space-md) var(--space-sm); border: var(--rule-hair) solid var(--color-ink); border-radius: var(--radius-pill); background: var(--color-paper-3); overflow: clip; }
@@ -520,6 +521,13 @@ function humanSize(bytes) {
   return `${value.toFixed(unit ? 1 : 0)} ${units[unit]}`;
 }
 
+function humanTime(seconds) {
+  if (seconds < 60) return `${seconds}s`;
+  const m = Math.floor(seconds / 60);
+  const s = Math.round(seconds % 60);
+  return s > 0 ? `${m}m ${s}s` : `${m}m`;
+}
+
 function showSelectedFile(file) {
   if (!file) return;
   if (objectUrl) URL.revokeObjectURL(objectUrl);
@@ -611,14 +619,29 @@ function renderJob(job) {
   serverStatus.textContent = job.status.toUpperCase();
   serverStatus.dataset.state = job.status;
   jobId.textContent = job.id;
-  setProgress(job.progress || 0, `${job.step} · ${job.progress || 0}%`);
+
+  const totalText = job.total_elapsed != null ? ` · ${humanTime(job.total_elapsed)}` : '';
+  setProgress(job.progress || 0, `${job.step} · ${job.progress || 0}%${totalText}`);
   errorBox.textContent = job.error || '';
+
+  if (job.step_timings) {
+    steps.forEach(step => {
+      const label = step.querySelector('span:nth-child(2)').textContent;
+      const stateEl = step.querySelector('.step-state');
+      const elapsed = job.step_timings[label];
+      if (elapsed != null) {
+        stateEl.textContent = humanTime(elapsed);
+        stateEl.dataset.timed = '';
+      }
+    });
+  }
+
   downloads.innerHTML = '';
 
   const labels = {
-    output_burned_video: 'MP4 cuối · giọng Việt + burn subtitle',
-    output_dubbed_video: 'MP4 giọng Việt · soft subtitle',
-    output_video: 'MP4 audio gốc · soft subtitle',
+    output_burned_video: 'Video · giọng Việt + phụ đề burn',
+    output_dubbed_video: 'Video · giọng Việt + soft sub',
+    output_video: 'Video · audio gốc + soft sub',
     vi_srt: 'Vietnamese SRT', original_srt: 'Original SRT', audio: 'Extracted WAV', input: 'Input video'
   };
   const order = ['output_burned_video', 'output_dubbed_video', 'output_video', 'vi_srt', 'original_srt', 'audio', 'input'];

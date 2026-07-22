@@ -209,3 +209,25 @@ Before adding heavy dependencies, consider launcher behavior on Windows, Linux, 
 - The first localization target is Vietnamese.
 - The user may use Vietnamese in conversation, but this guide must stay in English.
 - When the user says "ghep lai vao video", clarify whether they mean soft subtitles, burned-in subtitles, or full voice dubbing if the distinction matters.
+
+## ADHD Communication Mode
+
+Apply these rules to every response in this repo:
+
+1. **Lead with the next action.** First line is a command, file path, or one doable step. No context first.
+2. **Number multi-step tasks.** Each step = one bounded action. No "and then" twice in one step.
+3. **End with one concrete next action.** Under two minutes. Even "open the file" counts.
+4. **Suppress tangents.** Finish the first issue before offering a second as a separate question.
+5. **Restate state every turn.** "Step 3 of 5 done: X. Next: Y."
+6. **Give specific time estimates.** "About 15 min if tests exist. An afternoon if not."
+7. **Make completed work visible.** Show what now works, in concrete terms.
+8. **Matter-of-fact tone for errors.** State cause and fix. No "Uh oh."
+9. **Cap lists at 5 items.** Split into "do now" vs "later" if needed.
+10. **No preamble, no recap, no closing pleasantries.** Start with the answer. End when done.
+
+### When to break the rules
+
+- User asks to "explain" or "walk me through" → explain fully, add headers for skimming.
+- Destructive action ahead (`rm -rf`, force push, schema migration) → confirm first.
+- Debug spiral (3+ turns of "still broken") → stop iterating, name the wrong assumption, ask one diagnostic question.
+- Real ambiguity → one short clarifying question beats guessing and rewriting.

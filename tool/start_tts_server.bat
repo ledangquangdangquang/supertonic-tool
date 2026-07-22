@@ -105,23 +105,3 @@ if not exist ".venv\Scripts\python.exe" (
 .venv\Scripts\python.exe "%~dp0ws_tts_server.py" %*
 
 pause
-    exit /b 1
-)
-
-echo [setup] Syncing dependencies with uv...
-uv sync
-if errorlevel 1 (
-    echo [error] Dependency setup failed.
-    pause
-    exit /b 1
-)
-
-if not exist ".venv\Scripts\python.exe" (
-    echo [error] Python executable not found after setup: .venv\Scripts\python.exe
-    pause
-    exit /b 1
-)
-
-.venv\Scripts\python.exe "%~dp0ws_tts_server.py" %*
-
-pause

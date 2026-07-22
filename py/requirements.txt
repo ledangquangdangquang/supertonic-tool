@@ -19,3 +19,4 @@ onnxruntime-directml>=1.24.3; sys_platform == "win32" and (platform_machine == "
 websockets>=16.0
 pyrubberband>=0.4.0
 audiotsm>=0.1.2
+deep-translator>=1.11.4
